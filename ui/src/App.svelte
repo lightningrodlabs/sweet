@@ -5,7 +5,7 @@
   import { AppAgentWebsocket, AdminWebsocket } from '@holochain/client';
   import '@shoelace-style/shoelace/dist/themes/light.css';
   import 'highlight.js/styles/github.css';
-  import { WeClient, isWeContext, initializeHotReload, type HrlWithContext, type Hrl } from '@lightningrodlabs/we-applet';
+  import { WeClient, isWeContext, initializeHotReload, type WAL} from '@lightningrodlabs/we-applet';
   import { ProfilesClient, ProfilesStore } from '@holochain-open-dev/profiles';
   import "@holochain-open-dev/profiles/dist/elements/profiles-context.js";
   import "@holochain-open-dev/profiles/dist/elements/profile-prompt.js";
@@ -29,13 +29,13 @@
 
   enum RenderType {
     App,
-    Hrl,
+    WAL,
     CreateSpreadsheet,
     BlockActiveBoards
   }
 
   let renderType = RenderType.App
-  let hrlWithContext: HrlWithContext
+  let wal: WAL
 
   initialize()
 
@@ -51,7 +51,8 @@
     if (!isWeContext()) {
         console.log("adminPort is", adminPort)
         if (adminPort) {
-          const adminWebsocket = await AdminWebsocket.connect(new URL(`ws://localhost:${adminPort}`))
+          const url = `ws://localhost:${adminPort}`
+          const adminWebsocket = await AdminWebsocket.connect({url: new URL(url)})
           const x = await adminWebsocket.listApps({})
           console.log("apps", x)
           const cellIds = await adminWebsocket.listCellIds()
@@ -59,7 +60,7 @@
           await adminWebsocket.authorizeSigningCredentials(cellIds[0])
         }
         console.log("appPort and Id is", appPort, appId)
-        client = await AppAgentWebsocket.connect(new URL(url), appId)
+        client = await AppAgentWebsocket.connect(appId, {url: new URL(url)})
         profilesClient = new ProfilesClient(client, appId);
     }
     else {
@@ -87,15 +88,15 @@
                   createView = weClient.renderInfo.view
               }              
               break;
-            case "attachable":
+            case "asset":
               switch (weClient.renderInfo.view.roleName) {
                 case "calcy":
                   switch (weClient.renderInfo.view.integrityZomeName) {
                     case "syn_integrity":
                       switch (weClient.renderInfo.view.entryType) {
                         case "document":
-                          renderType = RenderType.Hrl
-                          hrlWithContext = weClient.renderInfo.view.hrlWithContext
+                          renderType = RenderType.WAL
+                          wal = weClient.renderInfo.view.wal
                           break;
                         default:
                           throw new Error("Unknown entry type:"+weClient.renderInfo.view.entryType);
@@ -163,8 +164,8 @@
       <ControllerCreate  view={createView} client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerCreate>
     {:else if renderType== RenderType.App}
       <Controller  client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></Controller>
-    {:else if  renderType== RenderType.Hrl && !hrlWithContext.context}
-      <ControllerBoard  board={hrlWithContext.hrl[1]} client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerBoard>
+    {:else if  renderType== RenderType.WAL && !wal.context}
+      <ControllerBoard  board={wal.hrl[1]} client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerBoard>
     {:else if  renderType== RenderType.BlockActiveBoards}
       <ControllerBlockActiveBoards client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerBlockActiveBoards>
     {/if}

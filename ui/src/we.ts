@@ -3,7 +3,7 @@ import type { BoardEphemeralState, BoardState } from './board';
 import { asyncDerived, pipe, sliceAndJoin, toPromise } from '@holochain-open-dev/stores';
 import { BoardType } from './boardList';
 import { LazyHoloHashMap } from '@holochain-open-dev/utils';
-import type { AppletHash, AppletServices, AttachableInfo, HrlWithContext, WeServices } from '@lightningrodlabs/we-applet';
+import type { AppletHash, AppletServices, AssetInfo, WAL, WeServices } from '@lightningrodlabs/we-applet';
 import { getMyDna } from './util';
 import type { AppAgentClient, RoleName, ZomeName } from '@holochain/client';
 
@@ -49,20 +49,20 @@ export const appletServices: AppletServices = {
       },      
     },
     bindAsset: async (appletClient: AppAgentClient,
-      srcWal: HrlWithContext, dstWal: HrlWithContext): Promise<void> => {
+      srcWal: WAL, dstWal: WAL): Promise<void> => {
       console.log("Bind requested.  Src:", srcWal, "  Dst:", dstWal)
     },
-    getAttachableInfo: async (
+    getAssetInfo: async (
       appletClient: AppAgentClient,
       roleName: RoleName,
       integrityZomeName: ZomeName,
       entryType: string,
-      hrlWithContext: HrlWithContext
-    ): Promise<AttachableInfo | undefined> => {
+      wal: WAL
+    ): Promise<AssetInfo | undefined> => {
       if (entryType == "document") {
         const synClient = new SynClient(appletClient, roleName, ZOME_NAME);
         const synStore = new SynStore(synClient);
-        const documentHash = hrlWithContext.hrl[1]
+        const documentHash = wal.hrl[1]
         const docStore = new DocumentStore<BoardState, BoardEphemeralState> (synStore, documentHash)
         const workspaces = await toPromise(docStore.allWorkspaces)
         const workspace = new WorkspaceStore(docStore, Array.from(workspaces.keys())[0])
@@ -82,7 +82,7 @@ export const appletServices: AppletServices = {
       appletHash: AppletHash,
       weServices: WeServices,
       searchFilter: string
-    ): Promise<Array<HrlWithContext>> => {
+    ): Promise<Array<WAL>> => {
         const synClient = new SynClient(appletClient, ROLE_NAME, ZOME_NAME);
         const synStore = new SynStore(synClient);
         const boardHashes = asyncDerived(synStore.documentsByTag.get(BoardType.active),x=>Array.from(x.keys()))

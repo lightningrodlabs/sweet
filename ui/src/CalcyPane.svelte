@@ -16,8 +16,7 @@
   import AttachmentsList from './AttachmentsList.svelte';
   import AttachmentsDialog from "./AttachmentsDialog.svelte"
 
-  import { weaveUrlFromWal, type HrlWithContext } from "@lightningrodlabs/we-applet";
-  import { hrlB64WithContextToRaw } from "./util";
+  import type { WAL } from "@lightningrodlabs/we-applet";
   import '@lightningrodlabs/we-elements/dist/elements/wal-embed.js';
 
   // import  {Workbook}  from "@fortune-sheet/react";
@@ -61,7 +60,6 @@
   // import FUniver from "@univerjs/facade";
 
   import { spread } from "svelte/internal";
-  import type { HrlWithContext } from "@lightningrodlabs/we-applet";
 
   const delay = ms => new Promise(res => setTimeout(res, ms));
   let sheet;
@@ -278,9 +276,9 @@
     console.log("funiver", funiver)
 	});
   
-  const copyHrlToClipboard = () => {
-    const attachment: HrlWithContext = { hrl: [store.dnaHash, activeBoard.hash], context: "" }
-    store.weClient?.hrlToClipboard(attachment)
+  const copyWalToPocket = () => {
+    const attachment: WAL = { hrl: [store.dnaHash, activeBoard.hash], context: "" }
+    store.weClient?.walToPocket(attachment)
   }
 
 </script>
@@ -323,7 +321,7 @@
             </div>
           {/if}
           <div style="margin-left:10px; margin-top:2px;display:flex">
-            <button title="Add Board to Pocket" class="attachment-button" style="margin-right:10px" on:click={()=>copyHrlToClipboard()} >          
+            <button title="Add Board to Pocket" class="attachment-button" style="margin-right:10px" on:click={()=>copyWalToPocket()} >          
               <SvgIcon icon="addToPocket" size="20px"/>
             </button>
             <button class="attachment-button" style="margin-right:10px" on:click={()=>attachmentsDialog.open(undefined)} >          

@@ -9,14 +9,14 @@
     "package": "rm -f dist.zip && npm run build && cd dist && bestzip ../dist.zip *"
   },
   "dependencies": {
-    "@holochain-open-dev/elements": "^0.8.4",
-    "@holochain-open-dev/profiles": "^0.17.3",
-    "@holochain-open-dev/stores": "^0.8.10",
-    "@holochain-open-dev/utils": "^0.16.4",
-    "@holochain-syn/core": "^0.12.1",
-    "@holochain/client": "^0.16.7",
-    "@lightningrodlabs/we-applet": "^0.15.0",
-    "@lightningrodlabs/we-elements": "^0.4.5",
+    "@holochain-open-dev/elements": "^0.300.0-dev.0",
+    "@holochain-open-dev/profiles": "^0.300.0-dev.0",
+    "@holochain-open-dev/stores": "^0.300.0-dev.0",
+    "@holochain-open-dev/utils": "^0.300.0-dev.0",
+    "@holochain-syn/core": "0.300.0-dev.0",
+    "@holochain/client": "^0.17.0-dev.7",
+    "@lightningrodlabs/we-applet": "^0.16.0",
+    "@lightningrodlabs/we-elements": "^0.5.0",
     "@holochain/tryorama": "^0.11.0",
     "@mdi/js": "^7.1.96",
     "@ts-stack/markdown": "^1.5.0",
@@ -48,7 +48,7 @@
     "@univerjs/facade": "^0.1.2"
   },
   "devDependencies": {
-    "@lightningrodlabs/we-dev-cli": "^0.10.5",
+    "@lightningrodlabs/we-dev-cli": "^0.11.0",
     "@sveltejs/vite-plugin-svelte": "^2.0.2",
     "@tsconfig/svelte": "^3.0.0",
     "bestzip": "^2.2.0",
