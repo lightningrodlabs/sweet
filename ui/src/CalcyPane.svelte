@@ -357,7 +357,7 @@
   {#if $state}
   <!-- <button on:click={saveSheet}>Save</button> -->
   <!-- <div id="spreadsheet" style="height:100%; position: relative; top: -32px;"> -->
-   <div id="spreadsheet" style="height:100%; position: relative; top: -32px;" on:click={maybeSave}>
+   <div id="spreadsheet" style="height:100%; position: relative;" on:click={maybeSave}>
       <!-- <ReactAdapter
         el={Workbook}
         data={[{ name: "Sheet1", rows:20}]} 
