@@ -3,12 +3,12 @@ import { get, type Readable } from "svelte/store";
 import { v1 as uuidv1 } from "uuid";
 import { type AgentPubKey, type EntryHash, type EntryHashB64, encodeHashToBase64, type AgentPubKeyB64, type Timestamp } from "@holochain/client";
 import { BoardType } from "./boardList";
-import type { HrlB64WithContext } from "@lightningrodlabs/we-applet";
 import type { IWorkbookData } from '@univerjs/core';
+import type { WALUrl } from "./util";
 
 export type BoardProps = {
   bgUrl: string,
-  attachments: Array<HrlB64WithContext>
+  attachments: Array<WALUrl>
 }
 
 export type BoardEphemeralState = { [key: string]: string };
@@ -17,7 +17,7 @@ export interface BoardState {
   name: string;
   props: BoardProps;
   spreadsheet: IWorkbookData;
-  boundTo: Array<HrlB64WithContext>
+  boundTo: Array<WALUrl>
 }
   
   export type BoardDelta =
@@ -156,7 +156,6 @@ export class Board {
   }
 
   requestChanges(deltas: Array<BoardDelta>) {
-      // console.log("REQUESTING BOARD CHANGES: ", deltas)
       this.session.change((state,_eph)=>{
         for (const delta of deltas) {
           boardGrammar.applyDelta(delta, state,_eph, undefined)

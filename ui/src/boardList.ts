@@ -58,7 +58,7 @@ export class BoardList {
                 new Board(docStore,  new WorkspaceStore(docStore, Array.from(workspaces.keys())[0]))
         )
         const latestState = pipe(board, 
-            board => board.workspace.latestSnapshot
+            board => board.workspace.latestState
             )
         const tip = pipe(board,
             board => board.workspace.tip
