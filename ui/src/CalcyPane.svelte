@@ -107,7 +107,7 @@
   const maybeSave = async () =>{
     await delay(100)
     const previousVersion = JSON.stringify(previousState)
-    const newVersion = JSON.stringify($state)
+    const newVersion = JSON.stringify($synState)
     // console.log(previousVersion)
     // console.log("-------------")
     // console.log(newVersion)
@@ -121,7 +121,7 @@
     // await delay(100)
     console.log("updating sheet")
     const activeSheet = funiver.getActiveWorkbook().getActiveSheet();
-    const spreadsheet = $state.spreadsheet.sheets
+    const spreadsheet = $synState.spreadsheet.sheets
     // console.log("spreadsheet", spreadsheet)
     const localState = sheet.save().sheets;
     // console.log("localState", localState)
@@ -201,9 +201,9 @@
   $: uiProps = store.uiProps
   $: participants = activeBoard.participants()
   $: activeHashB64 = store.boardList.activeBoardHashB64;
-  $: state = activeBoard.readableState()
-  $: if ($state && $funiver) {
-    console.log("state change", $state)
+  $: synState = activeBoard.readableState()
+  $: if ($synState && $funiver) {
+    console.log("state change", $synState)
     updateSheet()
     // const s = sheet.getActiveSheet()
     // console.log(sheet.activeSheet())
@@ -224,7 +224,7 @@
       spreadsheet: sheetData
     }]
     activeBoard.requestChanges(changes)
-    previousState = {...cloneDeep($state)}
+    previousState = {...cloneDeep($synState)}
     // console.log("previous state set", previousState)
 
     // const l = await activeBoard.readableState()
@@ -263,12 +263,12 @@
   onMount(async () => {
     console.log("previous state set", previousState)
     const savedBoard = await activeBoard.readableState()
-    console.log($state.spreadsheet)
-    sheet = univer.createUniverSheet($state.spreadsheet);
+    console.log($synState.spreadsheet)
+    sheet = univer.createUniverSheet($synState.spreadsheet);
     console.log(sheet)
-    // sheet = univer.createUniverDoc($state.spreadsheet);
+    // sheet = univer.createUniverDoc($synState.spreadsheet);
 
-    previousState = cloneDeep($state)
+    previousState = cloneDeep($synState)
     console.log("clonedeep", previousState)
     window.addEventListener("keydown", checkKey);
 
@@ -283,23 +283,23 @@
 
 </script>
 <div class="board" >
-  <!-- {JSON.stringify($state.spreadsheet.sheets["sheet-01"])} -->
+  <!-- {JSON.stringify($synState.spreadsheet.sheets["sheet-01"])} -->
     <EditBoardDialog bind:this={editBoardDialog}></EditBoardDialog>
   <div class="top-bar">
     <div class="left-items">
       {#if standAlone}
-        <h2>{$state.name}</h2>
+        <h2>{$synState.name}</h2>
       {:else}
         <sl-button  class="board-button close" on:click={closeBoard} title="Close">
           <SvgIcon icon=faClose size="16px"/>
         </sl-button>
         <sl-dropdown class="board-options board-menu" skidding=15>
-          <sl-button slot="trigger"   class="board-button settings" caret>{$state.name}</sl-button>
+          <sl-button slot="trigger"   class="board-button settings" caret>{$synState.name}</sl-button>
           <sl-menu className="settings-menu">
             <sl-menu-item on:click={()=> editBoardDialog.open(cloneDeep(activeBoard.hash))} class="board-settings" >
                 <SvgIcon icon="faCog"  style="background: transparent; opacity: .5; position: relative; top: -2px;" size="14px"/> <span>Settings</span>
             </sl-menu-item>
-            <sl-menu-item on:click={() => exportBoard($state)} title="Export" class="board-export" >
+            <sl-menu-item on:click={() => exportBoard($synState)} title="Export" class="board-export" >
               <SvgIcon icon="faFileExport"  style="background: transparent; opacity: .5; position: relative; top: -2px;" size="14px" /> <span>Export</span>
             </sl-menu-item>
             <sl-menu-item on:click={() => {
@@ -314,10 +314,10 @@
         </sl-dropdown>
         {#if store.weClient}
           <AttachmentsDialog activeBoard={activeBoard} bind:this={attachmentsDialog}></AttachmentsDialog>
-          {#if $state.boundTo.length>0}
+          {#if $synState.boundTo.length>0}
             <div style="margin-left:10px;display:flex; align-items: center">
               <span style="margin-right: 5px;">Bound To:</span>
-              <AttachmentsList allowDelete={false} attachments={$state.boundTo} />
+              <AttachmentsList allowDelete={false} attachments={$synState.boundTo} />
             </div>
           {/if}
           <div style="margin-left:10px; margin-top:2px;display:flex">
@@ -327,8 +327,8 @@
             <button class="attachment-button" style="margin-right:10px" on:click={()=>attachmentsDialog.open(undefined)} >          
               <SvgIcon icon="link" size="16px"/>
             </button>
-            {#if $state.props.attachments}
-              <AttachmentsList attachments={$state.props.attachments}
+            {#if $synState.props.attachments}
+              <AttachmentsList attachments={$synState.props.attachments}
                 allowDelete={false}/>
             {/if}
           </div>
@@ -354,7 +354,7 @@
 
     </div>
   </div>
-  {#if $state}
+  {#if $synState}
   <!-- <button on:click={saveSheet}>Save</button> -->
   <!-- <div id="spreadsheet" style="height:100%; position: relative; top: -32px;"> -->
    <div id="spreadsheet" style="height:100%; position: relative;" on:click={maybeSave}>
