@@ -72,9 +72,9 @@
 </script>
 
 
-<sl-dialog label="Calcy!: UI v0.3.1 for DNA v0.3.0" bind:this={dialog} width={600} >
+<sl-dialog label="Xylem Spreadsheets UI v0.10-dev.0 for DNA v0.10.0-dev.0" bind:this={dialog} width={600} >
     <div class="about">
-        <p>Xylem! is a demonstration Holochain app built by Lightning Rod Labs.</p>
+        <p>Xylem is a demonstration Holochain app built by Lightning Rod Labs.</p>
         <p> <b>Developers:</b>
             Check out this hApp's source-code <a href="https://github.com/lightningrodlabs/calcy">in our github repo</a>.
             This project's real-time syncronization is powered by <a href="https://github.com/holochain/syn">Syn</a>, 
