@@ -2,10 +2,10 @@
   import Controller from './Controller.svelte'
   import ControllerBoard from './ControllerBoard.svelte'
   import ControllerBlockActiveBoards from './ControllerBlockActiveBoards.svelte'
-  import { AppAgentWebsocket, AdminWebsocket } from '@holochain/client';
+  import { AppWebsocket, AdminWebsocket } from '@holochain/client';
   import '@shoelace-style/shoelace/dist/themes/light.css';
   import 'highlight.js/styles/github.css';
-  import { WeClient, isWeContext, initializeHotReload, type WAL} from '@lightningrodlabs/we-applet';
+  import { WeaveClient, isWeContext, initializeHotReload, type WAL} from '@lightningrodlabs/we-applet';
   import { ProfilesClient, ProfilesStore } from '@holochain-open-dev/profiles';
   import "@holochain-open-dev/profiles/dist/elements/profiles-context.js";
   import "@holochain-open-dev/profiles/dist/elements/profile-prompt.js";
@@ -20,8 +20,8 @@
   const adminPort = import.meta.env.VITE_ADMIN_PORT
   const url = `ws://localhost:${appPort}`;
 
-  let client: AppAgentWebsocket
-  let weClient: WeClient
+  let client: AppWebsocket
+  let weClient: WeaveClient
   let profilesStore : ProfilesStore|undefined = undefined
   let createView
 
@@ -60,11 +60,11 @@
           await adminWebsocket.authorizeSigningCredentials(cellIds[0])
         }
         console.log("appPort and Id is", appPort, appId)
-        client = await AppAgentWebsocket.connect(appId, {url: new URL(url)})
+        client = await AppWebsocket.connect(appId, {url: new URL(url)})
         profilesClient = new ProfilesClient(client, appId);
     }
     else {
-      weClient = await WeClient.connect(appletServices);
+      weClient = await WeaveClient.connect(appletServices);
 
       switch (weClient.renderInfo.type) {
         case "applet-view":

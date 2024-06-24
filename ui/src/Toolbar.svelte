@@ -51,7 +51,7 @@
   .toolbar {
     /* background: linear-gradient(90.1deg, #143C77 4.43%, #261492 99.36%); */
     /* background: black; */
-    background: linear-gradient(90.1deg, #555555 4.43%, #8c8c8c 99.36%);
+    background: linear-gradient(90.1deg, rgb(34 30 59) 4.43%, #7888ff 99.36%);
     align-items: center;
     justify-content: space-between;
     color: #fff;

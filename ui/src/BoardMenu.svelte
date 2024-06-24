@@ -45,8 +45,8 @@
 
     <GroupParticipants/>
         <h3 class="type-header">Boards</h3>
+        <div class="new-board" on:click={()=>newBoardDialog.open()} title="New Spreadsheet"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>New Spreadsheet</span></div>
         <div class="boards-section">
-            <div class="new-board" on:click={()=>newBoardDialog.open()} title="New Spreadsheet"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>New Spreadsheet</span></div>
             {#if $activeBoards.status == "complete" && $activeBoards.value.length > 0}
                 {#each $activeBoards.value as hash}
                     <div
@@ -181,7 +181,7 @@
         width: 290px;
         height: 50px;
         /* background: rgba(24, 55, 122, 1.0); */
-        background: rgb(229, 183, 0);
+        background: #7400eae6;
         border: 1px solid #4A559D;
         color: #fff;
         display: flex;
@@ -190,7 +190,7 @@
         font-size: 16px;
         font-weight: bold;
         transition: all .25s ease;
-        top: 3px;
+        left: 5px;
         padding: 15px 0;
         box-shadow: 0px 4px 8px rgba(35, 32, 74, 0);
     }
@@ -201,7 +201,7 @@
         width: 300px;
         border: 1px solid #252d5d;
         /* background: rgb(10, 25, 57); */
-        background: rgb(252, 202, 0);
+        background: #8e31ebe6;
         margin: 0 -5px 0 -5px;
         box-shadow: 0px 4px 15px rgba(35, 32, 74, 0.8);
     }
@@ -250,7 +250,7 @@
         align-items: center;
         width: 330px;
         left: 0;
-        background-color: rgba(23, 55, 123, .9);
+        background-color: #5c00eae6;
         animation-duration: .3s;
         animation-name: slideIn;
         animation-iteration-count: 1;

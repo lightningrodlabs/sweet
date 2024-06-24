@@ -30,13 +30,14 @@
   import "@univerjs/sheets-formula/lib/index.css";
   import "@univerjs/sheets-numfmt/lib/index.css";
 
-  import { enUS as UniverDesignEnUS } from '@univerjs/design';
-  // import { enUS as UniverDocsUIEnUS } from '@univerjs/docs-ui';
-  import { enUS as UniverSheetsEnUS } from '@univerjs/sheets';
-  import { enUS as UniverSheetsUIEnUS } from '@univerjs/sheets-ui';
-  import { enUS as UniverUiEnUS } from '@univerjs/ui';
+  import { Univer, LocaleType, Tools, LogLevel } from "@univerjs/core";
 
-  import { Univer, LocaleType, LogLevel } from "@univerjs/core";
+  import DesignEnUS from '@univerjs/design/locale/en-US';
+  import DocsUIEnUS from '@univerjs/docs-ui/locale/en-US';
+  import SheetsEnUS from '@univerjs/sheets/locale/en-US';
+  import SheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US';
+  import UIEnUS from '@univerjs/ui/locale/en-US';
+
   import { defaultTheme } from "@univerjs/design";
   import { UniverDocsPlugin } from "@univerjs/docs";
   import { UniverDocsUIPlugin } from "@univerjs/docs-ui";
@@ -66,19 +67,18 @@
   let funiver;
 
   const univer = new Univer({
-    theme: defaultTheme,
-    locale: LocaleType.EN_US,
-    logLevel: LogLevel.VERBOSE,
-
-    locales: {
-      [LocaleType.EN_US]: {
-        ...UniverSheetsEnUS,
-        ...UniverSheetsUIEnUS,
-        ...UniverUiEnUS,
-        ...UniverDesignEnUS,
-      },
-    }
-  });
+  theme: defaultTheme,
+  locale: LocaleType.EN_US,
+  locales: {
+    [LocaleType.EN_US]: Tools.deepMerge(
+      DesignEnUS,
+      DocsUIEnUS,
+      SheetsEnUS,
+      SheetsUIEnUS,
+      UIEnUS
+    ),
+  },
+});
 
   // doc plugins
   univer.registerPlugin(UniverDocsPlugin, {
