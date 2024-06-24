@@ -202,7 +202,7 @@
   $: participants = activeBoard.participants()
   $: activeHashB64 = store.boardList.activeBoardHashB64;
   $: synState = activeBoard.readableState()
-  $: if ($synState && $funiver) {
+  $: if ($synState && funiver) {
     console.log("state change", $synState)
     updateSheet()
     // const s = sheet.getActiveSheet()
