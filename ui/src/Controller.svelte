@@ -3,15 +3,15 @@
     import CalcyPane from './CalcyPane.svelte'
     import { CalcyStore } from './store'
     import { setContext } from 'svelte';
-    import type { AppAgentClient } from '@holochain/client';
+    import type { AppClient } from '@holochain/client';
     import type { SynStore } from '@holochain-syn/store';
     import type { ProfilesStore } from "@holochain-open-dev/profiles";
     import BoardMenu from "./BoardMenu.svelte";
-    import type { WeClient } from '@lightningrodlabs/we-applet';
+    import type { WeaveClient } from '@lightningrodlabs/we-applet';
 
     export let roleName = ""
-    export let client : AppAgentClient
-    export let weClient : WeClient
+    export let client : AppClient
+    export let weClient : WeaveClient
     export let profilesStore : ProfilesStore
 
     let store: CalcyStore = new CalcyStore (
@@ -24,6 +24,8 @@
 
     $: activeBoardHash = store.boardList.activeBoardHash
     $: activeBoard = store.boardList.activeBoard
+    $: participants = $activeBoard ? $activeBoard.sessionParticipants() : undefined
+    $: profile = profilesStore.profiles.get(client.myPubKey)
 
     setContext('synStore', {
       getStore: () => synStore,
@@ -70,8 +72,13 @@
       {/if}
 
 
-        {#if $activeBoardHash !== undefined}
-          <CalcyPane activeBoard={$activeBoard}/>
+        {#if $participants?.status == "complete"}
+          {#if $profile?.status == "complete"}
+            <!-- {JSON.stringify($participants.value)} -->
+            {#if $activeBoardHash !== undefined}
+              <CalcyPane activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value}/>
+            {/if}
+          {/if}
         {/if}
         </div>
         </div>

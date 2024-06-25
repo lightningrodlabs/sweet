@@ -45,7 +45,17 @@
     "@univerjs/sheets-formula": "^0.1.16",
     "@univerjs/sheets-ui": "^0.1.16",
     "@univerjs/ui": "^0.1.16",
-    "@univerjs/facade": "^0.1.16"
+    "@univerjs/facade": "^0.1.16",
+    "@univerjs/sheets-thread-comment": "^0.1.16",
+    "@univerjs/thread-comment-ui": "^0.1.16",
+    "@univerjs/sheets-conditional-formatting-ui": "^0.1.16",
+    "@univerjs/debugger": "^0.1.16",
+    "@univerjs/sheets-hyper-link-ui": "^0.1.16",
+    "@univerjs/sheets-data-validation": "^0.1.16",
+    "@univerjs/sheets-drawing-ui" : "^0.1.16",
+    "@univerjs/sheets-zen-editor": "^0.1.16",
+    "@univerjs/sheets-sort": "^0.1.16",
+    "@univerjs/sheets-sort-ui": "^0.1.16"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^2.0.2",
