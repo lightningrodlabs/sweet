@@ -55,7 +55,8 @@
     "@univerjs/sheets-drawing-ui" : "^0.1.16",
     "@univerjs/sheets-zen-editor": "^0.1.16",
     "@univerjs/sheets-sort": "^0.1.16",
-    "@univerjs/sheets-sort-ui": "^0.1.16"
+    "@univerjs/sheets-sort-ui": "^0.1.16",
+    "@univerjs/docs-drawing-ui": "^0.1.16"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^2.0.2",

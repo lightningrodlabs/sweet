@@ -6,6 +6,7 @@
   import Participants from "./Participants.svelte";
   import { BoardType } from "./boardList";
   import { hashEqual } from "./util";
+  import SvgIcon from "./SvgIcon.svelte";
 
   const dispatch = createEventDispatcher()
   const { getStore } :any = getContext("store");
@@ -28,6 +29,15 @@
         <div class="unread"></div>
       {/if}
 
+      <div style="margin-right: 0.5em;">
+        {#if boardType == BoardType.active}
+          {#if $boardData.value.latestState.type == "spreadsheet"}
+            <SvgIcon icon="spreadsheet" color="#8e31ebe6" size="20"></SvgIcon>
+          {:else if $boardData.value.latestState.type == "document"}
+            <SvgIcon icon="textDocument" color="#4A559D" size="20"></SvgIcon>            
+          {/if}
+        {/if}
+      </div>
       <div class="board-name">{$boardData.value.latestState.name}</div>
       {#if boardType == BoardType.active}
       <div style="width:100%; display:flex; justify-content:flex-end" bind:clientWidth={width}>

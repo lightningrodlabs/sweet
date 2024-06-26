@@ -12,6 +12,7 @@
     export let wide = false
 
     let newBoardDialog
+    let newBoardDropdown = false
 
     const { getStore } :any = getContext('store');
 
@@ -24,6 +25,26 @@
 
     const bgUrl = "none"
 
+    const addSpreadsheet = async () => {
+        // @ts-ignore
+        const board = await store.boardList.makeBoard({"name": "Untitled", "type": "spreadsheet"})
+        store.setUIprops({showMenu:false})
+        await store.boardList.setActiveBoard(board.hash)
+    }
+
+    const addDocument = async () => {
+        // @ts-ignore
+        const board = await store.boardList.makeBoard({"name": "Untitled", "type": "document"})
+        store.setUIprops({showMenu:false})
+        await store.boardList.setActiveBoard(board.hash)
+    }
+
+    const addPresentation = async () => {
+        // @ts-ignore
+        const board = await store.boardList.makeBoard({"name": "Untitled", "type": "presentation"})
+        store.setUIprops({showMenu:false})
+        await store.boardList.setActiveBoard(board.hash)
+    }
 
     const selectBoard = async (hash: EntryHash) => {
         store.setUIprops({showMenu:false})
@@ -42,10 +63,23 @@
 <AboutDialog bind:this={aboutDialog} />
 <div class="board-menu"
     class:wide={wide} >
+        <!-- <h3 class="type-header">Boards</h3> -->
+        <!-- dropdown new with multiple options -->
+        <div style="position: absolute; z-index: 1;" on:mouseenter={()=>newBoardDropdown = true} on:mouseleave={()=>newBoardDropdown = false}>
+        <div class="new-board dropdown-button"  title="New"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>New</span></div>
+        {#if newBoardDropdown}
+            <div class="new-board" on:click={()=>addSpreadsheet()} title="Spreadsheet"><SvgIcon color="white" size=25px icon=spreadsheet style="margin-left: 15px;"/><span>Spreadsheet</span></div>
+            <div class="new-board" on:click={()=>addDocument()} title="Board"><SvgIcon color="white" size=25px icon=textDocument style="margin-left: 15px;"/><span>Document</span></div>
+            <div class="new-board" on:click={()=>addPresentation()} title="Presentation"><SvgIcon color="white" size=25px icon=presentation style="margin-left: 15px;"/><span>Presentation</span></div>
+            <!-- upload/import -->
+            <div class="new-board" on:click={()=>addDocument()} title="Upload"><SvgIcon color="white" size=25px icon=faFileImport style="margin-left: 15px;"/><span>Import file</span></div>
+        {/if}
+        </div>
 
-    <GroupParticipants/>
-        <h3 class="type-header">Boards</h3>
-        <div class="new-board" on:click={()=>newBoardDialog.open()} title="New Spreadsheet"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>New Spreadsheet</span></div>
+        <div style="margin-top: 60px;"></div>
+        <!-- <GroupParticipants/> -->
+
+        <!-- <div class="new-board" on:click={()=>newBoardDialog.open()} title="New Spreadsheet"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>New Spreadsheet</span></div> -->
         <div class="boards-section">
             {#if $activeBoards.status == "complete" && $activeBoards.value.length > 0}
                 {#each $activeBoards.value as hash}
@@ -178,7 +212,7 @@
     .new-board {
         box-sizing: border-box;
         position: relative;
-        width: 290px;
+        width: 168px;
         height: 50px;
         /* background: rgba(24, 55, 122, 1.0); */
         background: #7400eae6;
@@ -198,12 +232,21 @@
     .new-board:hover {
         cursor: pointer;
         padding: 15px 5px;
-        width: 300px;
+        width: 178px;
         border: 1px solid #252d5d;
         /* background: rgb(10, 25, 57); */
         background: #8e31ebe6;
         margin: 0 -5px 0 -5px;
         box-shadow: 0px 4px 15px rgba(35, 32, 74, 0.8);
+    }
+
+    .new-board.dropdown-button {
+        cursor: default;
+        width: 168px;
+        padding: 15px 0;
+        margin: 0;
+        border: 1px solid #4A559D;
+        box-shadow: none;
     }
 
     .new-board span {

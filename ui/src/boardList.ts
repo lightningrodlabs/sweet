@@ -9,7 +9,7 @@ import { Board, type BoardDelta, type BoardState } from "./board";
 import { hashEqual } from "./util";
 
 
-import { LocaleType, LogLevel, Univer, UniverInstanceType, UserManagerService , Tools} from '@univerjs/core';
+import { LocaleType, LogLevel, Univer, UniverInstanceType, UserManagerService , Tools } from '@univerjs/core';
 
 import ThreadCommentUIEnUS from '@univerjs/thread-comment-ui/locale/en-US';
 import SheetsThreadCommentEnUS from '@univerjs/sheets-thread-comment/locale/en-US';
@@ -29,11 +29,18 @@ import { UniverSheetsFormulaPlugin } from "@univerjs/sheets-formula";
 import { UniverSheetsUIPlugin } from "@univerjs/sheets-ui";
 import { UniverUIPlugin } from "@univerjs/ui";
 
+import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
+import { UniverDebuggerPlugin } from '@univerjs/debugger';
+// import { UniverDocsDrawingUIPlugin } from '@univerjs/docs-drawing-ui';
+
 import { IThreadCommentMentionDataService, UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
 import { UniverSheetsThreadCommentPlugin } from '@univerjs/sheets-thread-comment';
 
 export enum BoardType {
     active = "active",
+    spreadsheet = "activespreadsheet",
+    document = "document",
+    presentation = "presentation",
     archived = "archived"
 }
 
@@ -72,7 +79,7 @@ export class BoardList {
             board => board.workspace.tip
             )
         console.log("boardData2:main")
-        return alwaysSubscribed(pipe(joinAsync([board, latestState, tip]), ([board, latestState, tip]) => {return {board,latestState, tip: tip ? tip.entryHash: undefined}}))
+return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latestState, board]) => {return {board, latestState, tip: tip ? tip.entryHash : undefined}}))
     })
 
 
@@ -215,7 +222,9 @@ export class BoardList {
         if (!options.name) {
             options.name = "untitled"
         }
-        
+
+        // let univer;
+
         const univer = new Univer({
             theme: defaultTheme,
             locale: LocaleType.EN_US,
@@ -227,51 +236,44 @@ export class BoardList {
                 SheetsUIEnUS,
                 UIEnUS,
                 ThreadCommentUIEnUS,
-                SheetsThreadCommentEnUS
+                SheetsThreadCommentEnUS,
             ),
             },
         });
- 
-        // const mockUser = {
-        //     userID: 'Owner_qxVnhPbQ',
-        //     name: 'Owner',
-        //     avatar: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAInSURBVHgBtZU9TxtBEIbfWRzFSIdkikhBSqRQkJqkCKTCFkqVInSUSaT0wC8w/gXxD4gU2nRJkXQWhAZowDUUWKIwEgWWbEEB3mVmx3dn4DA2nB/ppNuPeWd29mMIPXDr+RxwtgRHeW6+guNPRxogqnL7Dwz9psJ27S4NShaeZTH3kwXy6I81dlRKcmRui88swdq9AcSFL7Buz1Vmlns64MiLsCjzwnIYHLH57tbfFbs7KRaXyEU8FVZofqccOfA5l7Q8LPIkGrwnb2RPNEXWFVMUF3L+kDCk0btDDAMzOm5YfAHDwp4tG74wnzAsiOYMnJ3GoDybA7IT98/jm5+JNnfiIzAS6LlqHQBN/i6b2t/cV1Hh6BfwYlHnHP4AXi5q/8kmMMpOs8+BixZw/Fd6xUEHEbnkgclvQP2fGp7uShRKnQ3G32rkjV1th8JhIGG7tR/JyjGteSOZELwGMmNqIIigRCLRh2OZIE6BjItdd7pCW6Uhm1zzkUtungSxwEUzNpQ+GQumtH1ej1MqgmNT6vwmhCq5yuwq56EYTbgeQUz3yvrpV1b4ok3nYJ+eYhgYmjRUqErx2EDq0Fr8FhG++iqVGqxlUJI/70Ar0UgJaWHj6hYVHJrfKssAHot1JfqwE9WVWzXZVd5z2Ws/4PnmtEjkXeKJDvxUecLbWOXH/DP6QQ4J72NS0adedp1aseBfXP8odlZFfPvBF7SN/8hky1TYuPOAXAEipMx15u5ToAAAAABJRU5ErkJggg==',
-        //     anonymous: false,
-        //     canBindAnonymous: false,
-        // };
-    
-        // class CustomMentionDataService implements IThreadCommentMentionDataService {
-        //     trigger: string = '@';
         
-        //     async getMentions() {
-        //     return [
-        //         {
-        //             id: mockUser.userID,
-        //             label: mockUser.name,
-        //             type: 'user',
-        //             icon: mockUser.avatar,
-        //         },
-        //         {
-        //             id: '2',
-        //             label: 'User2',
-        //             type: 'user',
-        //             icon: mockUser.avatar,
-        //         },
-        //     ];
-        //     }
-        // }
-
-        // univer.registerPlugin(UniverSheetsThreadCommentPlugin);
-        
-        // univer.registerPlugin(UniverThreadCommentUIPlugin, {
-        //     overrides: [[IThreadCommentMentionDataService, { useClass: CustomMentionDataService }]],
+        // univer
+        // const univer = new Univer({
+        //     theme: defaultTheme,
+        //     locale: LocaleType.ZH_CN,
+        //     locales: {
+        //         [LocaleType.ZH_CN]: zhCN,
+        //         [LocaleType.EN_US]: enUS,
+        //         [LocaleType.RU_RU]: ruRU,
+        //     },
         // });
-        
-        
 
         // core plugins
         univer.registerPlugin(UniverRenderEnginePlugin);
         univer.registerPlugin(UniverFormulaEnginePlugin);
+        univer.registerPlugin(UniverDebuggerPlugin);
+        // univer.registerPlugin(UniverUIPlugin, {
+        //     container: 'app',
+        //     footer: false,
+        // });
+        // univer.registerPlugin(UniverDocsPlugin);
+        univer.registerPlugin(UniverDocsUIPlugin, {
+            container: 'univerdoc',
+            layout: {
+                docContainerConfig: {
+                    innerLeft: false,
+                },
+            },
+        });
+
+
+        console.log("1234")
+
+        // core plugins
         univer.registerPlugin(UniverUIPlugin, {
             container: "spreadsheet",
             header: true,
@@ -289,16 +291,34 @@ export class BoardList {
         univer.registerPlugin(UniverSheetsUIPlugin);
         univer.registerPlugin(UniverSheetsFormulaPlugin);
 
+        // univer.registerPlugin(UniverDocsDrawingUIPlugin);
+
         // let newSheet = univer.createUniverSheet({});
-        let newSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {});
+        // let newSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {});
 
+        // univer.registerPlugin(UniverDocsDrawingUIPlugin);
 
-        if (!options.spreadsheet) {
+        if (options.type == "spreadsheet") {
+            console.log("1111")
+            const newSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {});
             options.spreadsheet = newSheet.save()
+        } else {
+            console.log("2222")
+            let newDoc = univer.createUnit(UniverInstanceType.UNIVER_DOC, {});
+            if (!options.document) {
+                // options.document = newDoc.save()
+            }
         }
+
+        console.log("1314")
+
+
+        console.log("1516")
 
         // console.log("options", options)
         const board = await Board.Create(this.synStore, options)
+
+        console.log("1718")
         return board
     }
 }

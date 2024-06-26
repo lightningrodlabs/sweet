@@ -65,7 +65,6 @@
   import { UniverSheetsZenEditorPlugin } from '@univerjs/sheets-zen-editor';
   import { UniverSheetsSortPlugin } from '@univerjs/sheets-sort';
   import { UniverSheetsSortUIPlugin } from '@univerjs/sheets-sort-ui';
-  // import { UniverDocsDrawingUIPlugin } from '@univerjs/docs-drawing-ui';
   
   import { FUniver } from "@univerjs/facade";
   import { spread } from "svelte/internal";
@@ -111,13 +110,13 @@ univer.registerPlugin(UniverUIPlugin, {
 
 univer.registerPlugin(UniverDocsUIPlugin);
 
-
 univer.registerPlugin(UniverSheetsPlugin, {
     notExecuteFormula: true,
 });
 univer.registerPlugin(UniverSheetsUIPlugin);
 
 // sheet feature plugins
+
 univer.registerPlugin(UniverSheetsNumfmtPlugin);
 univer.registerPlugin(UniverSheetsZenEditorPlugin);
 univer.registerPlugin(UniverFormulaEnginePlugin, {
@@ -139,8 +138,6 @@ univer.registerPlugin(UniverSheetsSortUIPlugin);
 
 // sheet condition formatting
 univer.registerPlugin(UniverSheetsConditionalFormattingUIPlugin);
-
-// univer.registerPlugin(UniverDocsDrawingUIPlugin);
 
 // drawing
 univer.registerPlugin(UniverSheetsDrawingUIPlugin);
@@ -345,16 +342,9 @@ univer.registerPlugin(UniverSheetsDrawingUIPlugin);
   onMount(async () => {
     console.log("previous state set", previousState)
     const savedBoard = await activeBoard.readableState()
-    console.log("THIS IS THE BOARD", savedBoard)
     console.log($synState.spreadsheet)
     // sheet = univer.createUniverSheet($synState.spreadsheet);
-    if ($synState.type === "spreadsheet") {
-      console.log("spreadsheet")
-      currentSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, $synState.spreadsheet);
-    } else {
-      console.log("not spreadsheet")
-      currentSheet = univer.createUnit(UniverInstanceType.UNIVER_DOC, $synState.spreadsheet);
-    }
+    currentSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, $synState.spreadsheet);
     console.log(currentSheet)
     // sheet = univer.createUniverDoc($synState.spreadsheet);
 
@@ -372,6 +362,7 @@ univer.registerPlugin(UniverSheetsDrawingUIPlugin);
   }
 
 </script>
+HI
 <div class="board" >
     <EditBoardDialog bind:this={editBoardDialog}></EditBoardDialog>
   <div class="top-bar">
@@ -379,18 +370,11 @@ univer.registerPlugin(UniverSheetsDrawingUIPlugin);
       {#if standAlone}
         <h2>{$synState.name}</h2>
       {:else}
-        <button  class="board-button close" on:click={closeBoard} title="Close">
+        <sl-button  class="board-button close" on:click={closeBoard} title="Close">
           <SvgIcon icon=faClose size="16px"/>
-        </button>
-        <ClickEdit
-            text={$synState.name}
-            handleSave={(value) => {
-              activeBoard.requestChanges([{type: 'set-name', name: value}])
-            }}
-          />
+        </sl-button>
         <sl-dropdown class="board-options board-menu" skidding=15>
-          <sl-button slot="trigger"   class="board-button settings" caret>&nbsp;</sl-button>
-           <!-- editable name input -->
+          <sl-button slot="trigger"   class="board-button settings" caret>{$synState.name}</sl-button>
           <sl-menu className="settings-menu">
             <sl-menu-item on:click={()=> editBoardDialog.open(cloneDeep(activeBoard.hash))} class="board-settings" >
                 <SvgIcon icon="faCog"  style="background: transparent; opacity: .5; position: relative; top: -2px;" size="14px"/> <span>Settings</span>
@@ -561,24 +545,20 @@ univer.registerPlugin(UniverSheetsDrawingUIPlugin);
   .board-button {
     width: 30px;
     height: 30px;
-    /* background: #FFFFFF; */
-    background: transparent;
-    /* border: 1px solid rgba(35, 32, 74, 0.1); */
-    border: none;
-    /* box-shadow: 0px 4px 4px rgba(66, 66, 66, 0.1); */
+    background: #FFFFFF;
+    border: 1px solid rgba(35, 32, 74, 0.1);
+    box-shadow: 0px 4px 4px rgba(66, 66, 66, 0.1);
     border-radius: 5px;
-    /* padding: 3px 6px; */
-    padding: 0;
+    padding: 5px 10px;
     display: flex;
     transform: scale(1);
     align-items: center;
     justify-content: center;
-    transition: all .1s ease;
+    transition: all .25s ease;
   }
   
   .board-button:hover {
-    /* background-color: rgb(233, 233, 233); */
-    transform: scale(1.2);
+    transform: scale(1.25);
   }
 
   .board-button:active {
@@ -624,10 +604,8 @@ univer.registerPlugin(UniverSheetsDrawingUIPlugin);
     height: 30px;
     padding: 4px;
     border-radius: 50%;
-    /* border: 1px solid rgba(235, 235, 238, 1.0); */
-    border: none;
-    /* background-color: rgba(255,255,255,.8);     */
-    background: transparent;
+    border: 1px solid rgba(235, 235, 238, 1.0);
+    background-color: rgba(255,255,255,.8);    
   }
   :global(.attachment-button:hover) {
     transform: scale(1.25);

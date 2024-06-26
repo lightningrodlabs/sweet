@@ -15,8 +15,10 @@ export type BoardEphemeralState = { [key: string]: string };
 
 export interface BoardState {
   name: string;
+  type: string;
   props: BoardProps;
   spreadsheet: IWorkbookData;
+  document: IWorkbookData;
   boundTo: Array<WALUrl>
 }
   
@@ -43,6 +45,7 @@ export interface BoardState {
     initialState(init: Partial<BoardState>|undefined = undefined)  {
       const state: BoardState = {
         name: "untitled",
+        type: init?.type || "document",
         props: {bgUrl:"", attachments:[]},
         boundTo: [],
         spreadsheet: null
@@ -61,6 +64,7 @@ export interface BoardState {
       switch (delta.type) {
         case "set-state":
           if (delta.state.name !== undefined) state.name = delta.state.name
+          if (delta.state.type !== undefined) state.type = delta.state.type
           if (delta.state.spreadsheet !== undefined) state.spreadsheet = delta.state.spreadsheet
           if (delta.state.props !== undefined) state.props = delta.state.props
           if (delta.state.boundTo !== undefined) state.boundTo = delta.state.boundTo
@@ -97,6 +101,12 @@ export class Board {
     const documentStore = await synStore.createDocument(initState,{})
 
     await synStore.client.tagDocument(documentStore.documentHash, BoardType.active)
+
+    if (init.type === "spreadsheet") {
+      await synStore.client.tagDocument(documentStore.documentHash, BoardType.spreadsheet)
+    } else if (init.type === "document") {
+      await synStore.client.tagDocument(documentStore.documentHash, BoardType.document)
+    }
 
     const workspaceStore = await documentStore.createWorkspace(
         `${new Date}`,
