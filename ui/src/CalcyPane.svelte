@@ -181,7 +181,7 @@ univer.registerPlugin(UniverThreadCommentUIPlugin, {
     } else {
       console.log("no save");
     }
-  }, 1000);
+  }, 400);
 
 
 function removeSymbolFields(obj) {
@@ -310,16 +310,24 @@ const updateDocument = async () => {
     }
   })
 
-  // update style
-  // let currentStyle = removeSymbolFields(localState.documentStyle);
-  // console.log("currentStyle", currentStyle)
-  // let newStyle = removeSymbolFields(spreadsheet.documentStyle);
-  // console.log("newStyle", newStyle)
-  // let stylePatch = dmp.patch_make(JSON.stringify(currentStyle), JSON.stringify(newStyle));
-  // let styleResult = dmp.patch_apply(stylePatch, JSON.stringify(currentStyle));
-  // console.log("styleResult", styleResult[0])
+  // // update style
+  // let originalStyle = JSON.stringify(localState.documentStyle);
+  // let newStyle1 = JSON.stringify(spreadsheet.documentStyle);
+  // let newStyle2 = JSON.stringify(localState.documentStyle);
+  // let diffsStyle1 = DMP.diff_main(originalStyle, newStyle1);
+  // let diffsStyle2 = DMP.diff_main(originalStyle, newStyle2);
+  // let allDiffsStyle = diffsStyle1.concat(diffsStyle2);
+  // let uniqueDiffsStyle = allDiffsStyle.filter((diff, index, self) =>
+  //   index === self.findIndex((t) => (
+  //     t[0] === diff[0] && t[1] === diff[1]
+  //   ))
+  // );
+  // let patchesStyle = DMP.patch_make(originalStyle, uniqueDiffsStyle);
+  // let [mergedStyle, resultsStyle] = DMP.patch_apply(patchesStyle, originalStyle);
+  // console.log("resultsStyle", resultsStyle)
+  // console.log("mergedStyle", mergedStyle)
 
-  // currentSheet.reset({...localState, body: {...localState.body, dataStream: result[0]}, documentStyle: JSON.parse(styleResult[0])})
+  // currentSheet.reset({...localState, body: {...localState.body, dataStream: mergedDataStream}, documentStyle: JSON.parse(mergedStyle)})
 
   // currentSheet.updateDocumentStyle(JSON.parse(styleResult[0]))
 }
@@ -465,7 +473,7 @@ const updateDocument = async () => {
 
   const saveDocument = async () => {
     const docSnapshot = changeUndefinedToEmptyString(removeSymbolFields(currentSheet.snapshot))
-    console.log("Doc data", docSnapshot)
+    // console.log("Doc data", docSnapshot)
 
     let changes: BoardDelta[] = [{
       type: "set-spreadsheet",
@@ -560,6 +568,10 @@ const updateDocument = async () => {
 
     funiver = FUniver.newAPI(univer);
     console.log("funiver", funiver)
+
+    return () => {
+      window.removeEventListener("click", checkKey);
+    };
 	});
   
   const copyWalToPocket = () => {
@@ -648,7 +660,9 @@ const updateDocument = async () => {
     </div>
   </div>
   {#if $synState}
-   <div id="spreadsheet" style="height:100%; position: relative;"></div>
+   <div
+   on:click={debouncedMaybeSave}
+    id="spreadsheet" style="height:100%; position: relative;"></div>
   {/if}
 </div>
 <style>
