@@ -36,6 +36,9 @@ import { UniverDebuggerPlugin } from '@univerjs/debugger';
 import { IThreadCommentMentionDataService, UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
 import { UniverSheetsThreadCommentPlugin } from '@univerjs/sheets-thread-comment';
 
+import { UniverSlidesPlugin } from '@univerjs/slides';
+import { UniverSlidesUIPlugin } from '@univerjs/slides-ui';
+
 export enum BoardType {
     active = "active",
     spreadsheet = "activespreadsheet",
@@ -271,8 +274,6 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         });
 
 
-        console.log("1234")
-
         // core plugins
         univer.registerPlugin(UniverUIPlugin, {
             container: "spreadsheet",
@@ -291,6 +292,9 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         univer.registerPlugin(UniverSheetsUIPlugin);
         univer.registerPlugin(UniverSheetsFormulaPlugin);
 
+        univer.registerPlugin(UniverSlidesPlugin);
+        univer.registerPlugin(UniverSlidesUIPlugin);
+
         // univer.registerPlugin(UniverDocsDrawingUIPlugin);
 
         // let newSheet = univer.createUniverSheet({});
@@ -302,12 +306,19 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
             console.log("1111")
             const newSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {});
             options.spreadsheet = newSheet.save()
-        } else {
+        } else if (options.type == "document") {
             console.log("2222")
             let newDoc = univer.createUnit(UniverInstanceType.UNIVER_DOC, {});
-            if (!options.document) {
-                // options.document = newDoc.save()
+            if (!options.spreadsheet) {
+                options.spreadsheet = newDoc.snapshot
             }
+        } else {
+            console.log("3333")
+            let newPres = univer.createUnit(UniverInstanceType.UNIVER_SLIDE, {});
+            if (!options.spreadsheet) {
+                options.spreadsheet = newPres
+            }
+            console.log("new presentation", newPres)
         }
 
         console.log("1314")
@@ -315,7 +326,7 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
 
         console.log("1516")
 
-        // console.log("options", options)
+        console.log("options", options)
         const board = await Board.Create(this.synStore, options)
 
         console.log("1718")

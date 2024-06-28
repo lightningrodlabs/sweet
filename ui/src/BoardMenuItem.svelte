@@ -34,7 +34,9 @@
           {#if $boardData.value.latestState.type == "spreadsheet"}
             <SvgIcon icon="spreadsheet" color="#8e31ebe6" size="20"></SvgIcon>
           {:else if $boardData.value.latestState.type == "document"}
-            <SvgIcon icon="textDocument" color="#4A559D" size="20"></SvgIcon>            
+            <SvgIcon icon="textDocument" color="#4A559D" size="20"></SvgIcon>
+          {:else if $boardData.value.latestState.type == "presentation"}
+            <SvgIcon icon="presentation" color="#7888ff" size="20"></SvgIcon>
           {/if}
         {/if}
       </div>

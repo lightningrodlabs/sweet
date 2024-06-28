@@ -16,13 +16,10 @@
   import AttachmentsList from './AttachmentsList.svelte';
   import AttachmentsDialog from "./AttachmentsDialog.svelte"
   import type { AppClient } from '@holochain/client';
-
+  import dmp from 'dmp';
   import type { WAL } from "@lightningrodlabs/we-applet";
   import '@lightningrodlabs/we-elements/dist/elements/wal-embed.js';
 
-  // import  {Workbook}  from "@fortune-sheet/react";
-  // import ReactAdapter from "./ReactAdapter.svelte";
-  // import "@fortune-sheet/react/dist/index.css"
   import type { IWorkbookData } from '@univerjs/core';
 
   import "@univerjs/design/lib/index.css";
@@ -31,8 +28,6 @@
   import "@univerjs/sheets-formula/lib/index.css";
   import "@univerjs/sheets-numfmt/lib/index.css";
   import '@univerjs/thread-comment-ui/lib/index.css';
-
-  // import { Univer, LocaleType, Tools, LogLevel } from "@univerjs/core";
   
   import ThreadCommentUIEnUS from '@univerjs/thread-comment-ui/locale/en-US';
   import SheetsThreadCommentEnUS from '@univerjs/sheets-thread-comment/locale/en-US';
@@ -66,7 +61,11 @@
   import { UniverSheetsSortPlugin } from '@univerjs/sheets-sort';
   import { UniverSheetsSortUIPlugin } from '@univerjs/sheets-sort-ui';
   // import { UniverDocsDrawingUIPlugin } from '@univerjs/docs-drawing-ui';
-  
+  import { UniverSlidesPlugin } from '@univerjs/slides';
+  import { UniverSlidesUIPlugin } from '@univerjs/slides-ui';
+
+  import type { JSONOpComponent } from 'ot-json1';
+
   import { FUniver } from "@univerjs/facade";
   import { spread } from "svelte/internal";
   import App from "./App.svelte";
@@ -76,8 +75,12 @@
   export let participants; //this is to make sure they are available on load
   export let standAlone = false
 
+  const DMP = new dmp();
+  
   const delay = ms => new Promise(res => setTimeout(res, ms));
+
   let currentSheet;
+  let lastReceivedState;
   let funiver;
 
   const univer = new Univer({
@@ -96,7 +99,7 @@
     },
   });
   
- // core plugins
+// ================== Register Plugins ==================
 univer.registerPlugin(UniverDocsPlugin, {
     hasScroll: false,
 });
@@ -107,17 +110,11 @@ univer.registerPlugin(UniverUIPlugin, {
     toolbar: true,
     footer: true,
   });
-// window.univerAPI = FUniver.newAPI(univer);
-
 univer.registerPlugin(UniverDocsUIPlugin);
-
-
 univer.registerPlugin(UniverSheetsPlugin, {
     notExecuteFormula: true,
 });
 univer.registerPlugin(UniverSheetsUIPlugin);
-
-// sheet feature plugins
 univer.registerPlugin(UniverSheetsNumfmtPlugin);
 univer.registerPlugin(UniverSheetsZenEditorPlugin);
 univer.registerPlugin(UniverFormulaEnginePlugin, {
@@ -127,79 +124,212 @@ univer.registerPlugin(UniverSheetsFormulaPlugin);
 univer.registerPlugin(UniverRPCMainThreadPlugin, {
     workerURL: './worker.js',
 } as IUniverRPCMainThreadConfig);
-
 univer.registerPlugin(UniverSheetsHyperLinkUIPlugin);
-
-// data validation
 univer.registerPlugin(UniverSheetsDataValidationPlugin);
-
-// sort
 univer.registerPlugin(UniverSheetsSortPlugin);
 univer.registerPlugin(UniverSheetsSortUIPlugin);
-
-// sheet condition formatting
 univer.registerPlugin(UniverSheetsConditionalFormattingUIPlugin);
-
 // univer.registerPlugin(UniverDocsDrawingUIPlugin);
-
-// drawing
+univer.registerPlugin(UniverSlidesPlugin);
+univer.registerPlugin(UniverSlidesUIPlugin);
 univer.registerPlugin(UniverSheetsDrawingUIPlugin);
-  const mockUser = {
-    userID: myProfile.agentPubKey,
-    name: myProfile.entry.nickname || "Anonymous User",
-    avatar: myProfile.entry.fields.avatar,
-    anonymous: false,
-    canBindAnonymous: false,
-  };
+// ================== Register Plugins Ends ==================
 
-  class CustomMentionDataService implements IThreadCommentMentionDataService {
-    trigger: string = '@';
+const mockUser = {
+  userID: myProfile.agentPubKey,
+  name: myProfile.entry.nickname || "Anonymous User",
+  avatar: myProfile.entry.fields.avatar,
+  anonymous: false,
+  canBindAnonymous: false,
+};
 
-    async getMentions() {
-      return [
-          {
-              id: mockUser.userID,
-              label: mockUser.name,
-              type: 'user',
-              icon: mockUser.avatar,
-          },
-          // {
-          //     id: '2',
-          //     label: 'User2',
-          //     type: 'user',
-          //     icon: mockUser.avatar,
-          // },
-      ];
+class CustomMentionDataService implements IThreadCommentMentionDataService {
+  trigger: string = '@';
+
+  async getMentions() {
+    return [
+        {
+            id: mockUser.userID,
+            label: mockUser.name,
+            type: 'user',
+            icon: mockUser.avatar,
+        },
+        // {
+        //     id: '2',
+        //     label: 'User2',
+        //     type: 'user',
+        //     icon: mockUser.avatar,
+        // },
+    ];
+  }
+}
+
+univer.registerPlugin(UniverSheetsThreadCommentPlugin);
+
+univer.registerPlugin(UniverThreadCommentUIPlugin, {
+    overrides: [[IThreadCommentMentionDataService, { useClass: CustomMentionDataService }]],
+});
+
+ const debouncedMaybeSave = debounce(async () => {
+    // await delay(100)
+    const previousVersion = JSON.stringify(previousState);
+    const newVersion = JSON.stringify($synState);
+    if ($synState.type == 'spreadsheet') {
+      saveSheet();
+    } else if ($synState.type == 'document') {
+      saveDocument();
+    } else {
+      console.log("no save");
     }
+  }, 1000);
+
+
+function removeSymbolFields(obj) {
+  let newObj = cloneDeep(obj)
+  for (const key in newObj) {
+      if (key.startsWith("Symbol") || key.startsWith("[[")) {
+          delete newObj[key];
+      } else if (typeof newObj[key] === "object" && newObj[key] !== null) {
+          removeSymbolFields(newObj[key]);
+      }
+  }
+  return newObj;
+}
+
+function changeUndefinedToEmptyString(obj) {
+    if (Array.isArray(obj)) {
+      return obj.map(item => changeUndefinedToEmptyString(item));
+    } else if (typeof obj === 'object' && obj !== null) {
+      let newObj = {};
+      for (const key in obj) {
+        if (obj[key] === undefined || obj[key] === null) {
+          newObj[key] = "";
+        } else if (typeof obj[key] === "object") {
+          newObj[key] = changeUndefinedToEmptyString(obj[key]);
+        } else {
+          newObj[key] = obj[key];
+        }
+      }
+      return newObj;
+    }
+    return obj
   }
 
-  univer.registerPlugin(UniverSheetsThreadCommentPlugin);
+const updateDocument = async () => {
+  console.log("updating document", currentSheet.snapshot)
+  console.log("coming in", $synState)
+  const spreadsheet = $synState.spreadsheet
+  console.log("spreadsheet", spreadsheet)
+  const localState = currentSheet.snapshot
+  console.log("localState", localState)
+  currentSheet.reset({...localState})
 
-  univer.registerPlugin(UniverThreadCommentUIPlugin, {
-      overrides: [[IThreadCommentMentionDataService, { useClass: CustomMentionDataService }]],
-  });
+  console.log(lastReceivedState)
+  let dataStream0 = lastReceivedState.spreadsheet.body.dataStream;
+  let dataStream1 = spreadsheet.body.dataStream;
+  let dataStream2 = localState.body.dataStream;
+  console.log("dataStream0", dataStream0)
+  console.log("dataStream1", dataStream1)
+  console.log("dataStream2", dataStream2)
+  // const modified = dmp.diff_main(dataStream1, dataStream2);
+  // const patch = dmp.patch_make(dataStream1, dataStream2);
+  // const result = dmp.patch_apply(patch, dataStream1);
 
-  const maybeSave = async () =>{
-    await delay(100)
-    const previousVersion = JSON.stringify(previousState)
-    const newVersion = JSON.stringify($synState)
-    // console.log(previousVersion)
-    // console.log("-------------")
-    // console.log(newVersion)
-    // if (previousVersion !== newVersion) {
-      // console.log("unsaved changes")
-      saveSheet()
-    // }
+  // Step 1: Find differences between dataStream1 and dataStream2
+  const diffs1 = DMP.diff_main(dataStream0, dataStream1);
+  const diffs2 = DMP.diff_main(dataStream0, dataStream2);
+
+  const allDiffs = diffs1.concat(diffs2);
+  const uniqueDiffs = allDiffs.filter((diff, index, self) =>
+    index === self.findIndex((t) => (
+      t[0] === diff[0] && t[1] === diff[1]
+    ))
+  );
+
+  // Step 2: Create patches based on the differences
+  const patches = DMP.patch_make(dataStream0, uniqueDiffs);
+
+  // Step 3: Apply patches to dataStream1 to get a merged result
+  const [mergedDataStream, results] = DMP.patch_apply(patches, dataStream0);
+  
+
+  console.log("results", results)
+  
+  // Check if all patches were applied successfully
+  const allApplied = results.every(result => result);
+  if (allApplied) {
+    console.log("Merged Data Stream:", mergedDataStream);
+  } else {
+    console.log("Some patches were not applied successfully.");
   }
+
+  // console.log("patches", patches)
+
+  // let convertedPatches = patches.map(patch => {
+  //   // Map each diff to its corresponding component
+  //   let components = patch.diffs.map(diff => {
+  //     let component = {};
+  //     if (diff[0] === 0) { // Equal
+  //       component["es"] = diff[1]; // Assuming 'es' is the correct key for 'equal' in your operational transformation library
+  //     } else if (diff[0] === 1) { // Insert
+  //       component["i"] = diff[1];
+  //     } else if (diff[0] === -1) { // Delete
+  //       component["d"] = diff[1]; // Assuming 'd' is the correct key for 'delete'
+  //     }
+  //     return component;
+  //   });
+  //   return components; // Return the full array of components for this patch
+  // });
+
+  // console.log("convertedPatches", JSON.stringify(convertedPatches))
+  // currentSheet.apply(convertedPatches)
+
+  // console.log("actually applied", currentSheet.snapshot)
+  // lastReceivedState = cloneDeep({...$synState, 
+  //   spreadsheet: {
+  //     ...$synState.spreadsheet,
+  //     body: {
+  //       ...$synState.spreadsheet.body,
+  //       dataStream: currentSheet.snapshot.body.dataStream
+  //     }
+  //   }
+  // })
+
+  currentSheet.reset({...localState, body: {...localState.body, dataStream: mergedDataStream}})
+
+  let activeDoc = univerAPI.getActiveDocument()
+  // activeDoc.appendText('Univer')
+
+  lastReceivedState = cloneDeep({...$synState, 
+    spreadsheet: {
+      ...$synState.spreadsheet,
+      body: {
+        ...$synState.spreadsheet.body,
+        dataStream: mergedDataStream
+      }
+    }
+  })
+
+  // update style
+  // let currentStyle = removeSymbolFields(localState.documentStyle);
+  // console.log("currentStyle", currentStyle)
+  // let newStyle = removeSymbolFields(spreadsheet.documentStyle);
+  // console.log("newStyle", newStyle)
+  // let stylePatch = dmp.patch_make(JSON.stringify(currentStyle), JSON.stringify(newStyle));
+  // let styleResult = dmp.patch_apply(stylePatch, JSON.stringify(currentStyle));
+  // console.log("styleResult", styleResult[0])
+
+  // currentSheet.reset({...localState, body: {...localState.body, dataStream: result[0]}, documentStyle: JSON.parse(styleResult[0])})
+
+  // currentSheet.updateDocumentStyle(JSON.parse(styleResult[0]))
+}
 
   const updateSheet = async () => {
     // await delay(100)
     console.log("updating sheet", currentSheet.save())
-    console.log("hijhhih")
     // const activeSheet = funiver.getActiveWorkbook().getActiveSheet();
     const activeSheet = univerAPI.getActiveWorkbook().getActiveSheet();
     console.log("SNAPSHOT", univerAPI.getActiveWorkbook().getSnapshot());
-    console.log("hjhhhj")
     const spreadsheet = $synState.spreadsheet.sheets
     // console.log("spreadsheet", spreadsheet)
     const localState = currentSheet.save().sheets;
@@ -250,24 +380,39 @@ univer.registerPlugin(UniverSheetsDrawingUIPlugin);
   }
 
   function checkKey(e: any) {
-    if (["Enter", 
+    if ($synState.type == "spreadsheet") {
+      if (["Enter", 
         "Tab", 
         "ArrowUp", 
         "ArrowDown", 
         "ArrowLeft", 
         "ArrowRight", 
         "Backspace", 
-        "Delete", 
+        "Delete",
         "Escape", 
         "Home", 
         "End", 
         "PageUp", 
         "PageDown"
-      ].includes(e.key) && !e.shiftKey) {
+      ].includes(e.key) && !e.shiftKey) { 
+        debouncedMaybeSave()
+       }
+    } else if ($synState.type == "document") {
+      // all typing keys
+      const nonModifyingKeys = [
+        "F1", "F2", "F3", "F4", "F5", "F6", 
+        "F7", "F8", "F9", "F10", "F11", "F12",
+        "Shift", "Control", "Alt", "Meta",
+        "CapsLock", "NumLock", "ScrollLock",
+        "Pause", "Insert", "PrintScreen",
+        "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+      ];
+      if (!nonModifyingKeys.includes(e.key) && !e.shiftKey) {
+        debouncedMaybeSave()
+      }
+    }
     //   e.preventDefault();
     //   open = false;
-        maybeSave()
-    }
   }
 
   const { getStore } :any = getContext("store");
@@ -279,17 +424,58 @@ univer.registerPlugin(UniverSheetsDrawingUIPlugin);
   // $: participants = activeBoard.participants()
   $: activeHashB64 = store.boardList.activeBoardHashB64;
   $: synState = activeBoard.readableState()
-  $: if ($synState && funiver) {
-    console.log("state change", $synState)
-    updateSheet()
-    // const s = sheet.getActiveSheet()
-    // console.log(sheet.activeSheet())
-    // const activeSheet = univerAPI.getActiveWorkbook().getActiveSheet();
-    // console.log("activeSheet", activeSheet)
+
+  // Debounce function
+  function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
+  }
+
+  // Your update logic wrapped in a debounced function
+  const debouncedUpdate = debounce(() => {
+    if ($synState.type == "spreadsheet") {
+      updateSheet();
+    } else if ($synState.type == "document") {
+      updateDocument();
+    } else {
+      console.log("no update");
+    }
+  }, 100); // 1000ms = 1 second
+
+
+  $: if ($synState && univerAPI) {
+    console.log("state change", $synState);
+    debouncedUpdate();
+    // console.log("state change", $synState)
+    // if ($synState.type == "spreadsheet") {
+    //   updateSheet()
+    // } else if ($synState.type == "document") {
+    //   updateDocument()
+    // } else {
+    //   console.log("no update")
+    // }
+  }
+
+  const saveDocument = async () => {
+    const docSnapshot = changeUndefinedToEmptyString(removeSymbolFields(currentSheet.snapshot))
+    console.log("Doc data", docSnapshot)
+
+    let changes: BoardDelta[] = [{
+      type: "set-spreadsheet",
+      spreadsheet: docSnapshot
+    }]
+    activeBoard.requestChanges(changes)
+    previousState = {...cloneDeep($synState)}
   }
 
   const saveSheet = async () => {
-    console.log("saving sheet")
     const sheetData = currentSheet.save();
     const sheetData2 = univerAPI.getActiveWorkbook().getSnapshot();
     console.log("sheetData", sheetData)
@@ -351,16 +537,26 @@ univer.registerPlugin(UniverSheetsDrawingUIPlugin);
     if ($synState.type === "spreadsheet") {
       console.log("spreadsheet")
       currentSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, $synState.spreadsheet);
-    } else {
+    } else if ($synState.type === "document") {
       console.log("not spreadsheet")
       currentSheet = univer.createUnit(UniverInstanceType.UNIVER_DOC, $synState.spreadsheet);
+    } else {
+      console.log("not spreadsheet")
+      currentSheet = univer.createUnit(UniverInstanceType.UNIVER_SLIDE, $synState.spreadsheet);
     }
     console.log(currentSheet)
     // sheet = univer.createUniverDoc($synState.spreadsheet);
 
     previousState = cloneDeep($synState)
+    lastReceivedState = cloneDeep($synState)
     console.log("clonedeep", previousState)
-    window.addEventListener("keydown", checkKey);
+
+    if ($synState.type == "spreadsheet") {
+      window.addEventListener("keydown", checkKey);
+      window.addEventListener("click", checkKey);
+    } else if ($synState.type == "document") {
+      window.addEventListener("keydown", checkKey);
+    }
 
     funiver = FUniver.newAPI(univer);
     console.log("funiver", funiver)
@@ -378,7 +574,8 @@ univer.registerPlugin(UniverSheetsDrawingUIPlugin);
     <div class="left-items">
       {#if standAlone}
         <h2>{$synState.name}</h2>
-      {:else}
+        {:else}
+        <!-- {JSON.stringify($synState)} -->
         <button  class="board-button close" on:click={closeBoard} title="Close">
           <SvgIcon icon=faClose size="16px"/>
         </button>
@@ -451,7 +648,7 @@ univer.registerPlugin(UniverSheetsDrawingUIPlugin);
     </div>
   </div>
   {#if $synState}
-   <div id="spreadsheet" style="height:100%; position: relative;" on:click={maybeSave}></div>
+   <div id="spreadsheet" style="height:100%; position: relative;"></div>
   {/if}
 </div>
 <style>

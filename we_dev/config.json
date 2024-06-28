@@ -35,18 +35,6 @@
             "instanceName": "Calcy Hot Reload",
             "registeringAgent": 1,
             "joiningAgents": [2]
-          },
-          {
-            "name": "gamez",
-            "instanceName": "gamez",
-            "registeringAgent": 1,
-            "joiningAgents": [2]
-          },
-          {
-            "name": "talking stickies",
-            "instanceName": "talking stickies",
-            "registeringAgent": 1,
-            "joiningAgents": [2]
           }
         ]
       }
