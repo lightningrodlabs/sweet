@@ -25,6 +25,8 @@
     $: activeBoardHash = store.boardList.activeBoardHash
     $: activeBoard = store.boardList.activeBoard
     $: participants = $activeBoard ? $activeBoard.sessionParticipants() : undefined
+    $: profiles = $participants ? profilesStore.allProfiles : undefined
+
     $: profile = profilesStore.profiles.get(client.myPubKey)
 
     setContext('synStore', {
@@ -74,14 +76,15 @@
 
         {#if $participants?.status == "complete"}
           {#if $profile?.status == "complete"}
-            <!-- {JSON.stringify($participants.value)} -->
-            {#if $activeBoardHash !== undefined}
-              <CalcyPane activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value}/>
+            {#if $profiles?.status == "complete"}
+              {#if $activeBoardHash !== undefined && profiles}
+                <CalcyPane activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/>
+              {/if}
             {/if}
           {/if}
         {/if}
         </div>
-        </div>
+      </div>
     </div>
   </div>
 </div>

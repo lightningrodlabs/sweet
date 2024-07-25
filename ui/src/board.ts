@@ -20,6 +20,7 @@ export interface BoardState {
   spreadsheet: IWorkbookData;
   document: IWorkbookData;
   boundTo: Array<WALUrl>
+  commands: Array<any>
 }
   
   export type BoardDelta =
@@ -38,7 +39,11 @@ export interface BoardState {
     | {
         type: "set-props";
         props: BoardProps;
-      };
+      }
+    | {
+      type: "execute-command";
+      command: any;
+    };
 
 
   export const boardGrammar = {
@@ -48,7 +53,9 @@ export interface BoardState {
         type: init?.type || "document",
         props: {bgUrl:"", attachments:[]},
         boundTo: [],
-        spreadsheet: null
+        spreadsheet: null,
+        document: null,
+        commands: []
       }
       if (init) {
         Object.assign(state, init);
@@ -78,6 +85,8 @@ export interface BoardState {
         case "set-props":
           state.props = delta.props
           break;
+        case "execute-command":
+          state.commands.push(delta.command)
       }
     },
   };

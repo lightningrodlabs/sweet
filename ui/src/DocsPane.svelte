@@ -159,6 +159,8 @@ univer.registerPlugin(UniverSheetsDrawingUIPlugin);
               label: mockUser.name,
               type: 'user',
               icon: mockUser.avatar,
+              anonymous: false,
+              canBindAnonymous: false,
           },
           // {
           //     id: '2',

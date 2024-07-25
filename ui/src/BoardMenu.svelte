@@ -163,7 +163,8 @@
         flex-direction: column;
         /* background: linear-gradient(94.53deg, #164B9A 12.76%, #5B47D6 99.41%); */
         /* background: linear-gradient(94.53deg, #2b2e31 12.76%, #545454 99.41%); */
-        background: linear-gradient(94.53deg, #81878e 12.76%, #c2c2c2 99.41%);
+        /* background: linear-gradient(94.53deg, #81878e 12.76%, #c2c2c2 99.41%); */
+        background-color: rgb(239, 239, 239);
         flex: 0 0 auto;
         align-items: flex-start;
         position: relative;
@@ -259,13 +260,13 @@
         width: 290px;
         border-radius: 5px;
         padding: 10px;
-        margin: 5px;
-        transition: all .25s ease;
-        border: 1px solid;
+        margin: 7px;
+        transition: all .15s ease;
+        /* border: 1px solid; */
         background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgb(200 221 237) 100%);
         position: relative;
         display: block;
-        box-shadow: 0px 4px 8px rgba(35, 32, 74, 0.8);
+        box-shadow: 0px 4px 8px rgba(167, 165, 189, 0.8);
     }
 
     .board:hover {
@@ -275,12 +276,12 @@
         width: 300px;
         background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 1) 100%);
         margin: 0 -10px 0 -5px;
-        box-shadow: 0px 4px 14px rgba(35, 32, 74, 0.8);
+        box-shadow: 0px 4px 14px rgba(167, 165, 189, 0.8);
         z-index: 100;
     }
 
     .wide .board:hover {
-        margin: 0 0 0 0;
+        margin: 0 4px 0 0;
     }
 
     .footer {
