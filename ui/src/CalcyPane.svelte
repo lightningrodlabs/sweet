@@ -36,7 +36,7 @@
   import SheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US';
   import UIEnUS from '@univerjs/ui/locale/en-US';
 
-  import { LocaleType, LogLevel, Univer, UniverInstanceType, UserManagerService , Tools, IUniverInstanceService} from '@univerjs/core';
+  import { LocaleType, LogLevel, Univer, UniverInstanceType, type JSONXActions, UserManagerService , Tools, IUniverInstanceService, MemoryCursor} from '@univerjs/core';
   import { defaultTheme } from '@univerjs/design';
   import { UniverDocsPlugin } from '@univerjs/docs';
   import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
@@ -66,6 +66,7 @@
   import { UniverSlidesPlugin } from '@univerjs/slides';
   import { UniverSlidesUIPlugin } from '@univerjs/slides-ui';
   import { FUniver } from "@univerjs/facade";
+    import { act } from "react";
 
   export let activeBoard: Board
   export let myProfile;
@@ -79,6 +80,8 @@
 
   let currentUniverEditable;
   let lastReceivedState;
+  let appliedCommandIds = [];
+  let lastCursorPosition = null;
   let funiver;
 
   const univer = new Univer({
@@ -145,25 +148,35 @@
   // ================== Register Plugins Ends ==================
 
   const mockUser = {
-    userID: myProfile.agentPubKey,
+    userID: JSON.stringify(myProfile.entry.fields.avatar),
     name: myProfile.entry.nickname || "Anonymous User",
     avatar: myProfile.entry.fields.avatar,
     anonymous: false,
-    canBindAnonymous: false,
+    canBindAnonymous: true,
   };
 
   class CustomMentionDataService implements IThreadCommentMentionDataService {
     trigger: string = '@';
 
     async getMentions() {
-      return [
-        {
-            id: mockUser.userID,
-            label: mockUser.name,
-            type: 'user',
-            icon: mockUser.avatar,
-        },
-      ];
+      // return [
+      //   {
+      //       id: mockUser.userID,
+      //       label: mockUser.name,
+      //       type: 'user',
+      //       icon: mockUser.avatar,
+      //   },
+      // ];
+      return $synState.users.map(profile => {
+        return {
+          id: profile.userID,
+          label: profile.name,
+          type: 'user',
+          icon: profile.avatar,
+          anonymous: false,
+          canBindAnonymous: false,
+        }
+      })
     }
     // async getMentions() {
     //   return profiles.map(profile => {
@@ -181,8 +194,7 @@
 
   const injector = univer.__getInjector();
   const userManagerService = injector.get(UserManagerService);
-  userManagerService.setCurrentUser(mockUser);
-
+  
   univer.registerPlugin(UniverThreadCommentPlugin);
   univer.registerPlugin(UniverDocsThreadCommentUIPlugin);
 
@@ -195,26 +207,28 @@
 
   const debouncedMaybeSave = debounce(async () => {
       // await delay(100)
-      const previousVersion = JSON.stringify(previousState);
+      // const previousVersion = JSON.stringify(previousState);
       const newVersion = JSON.stringify($synState);
       if ($synState.type == 'spreadsheet') {
         saveSheet();
       } else if ($synState.type == 'document') {
-        let newCommands = $synState.commands.slice(previousState.commands?.length)
-        if (newCommands.length > 0) {
-          newCommands.forEach(command => {
-            if ( !["thread-comment-ui.operation.set-active-comment", "doc.operation.set-selections"].includes(command.id)) {
-              console.log("executing command", command)
-              univerAPI.executeCommand(command.id, command.params)
-            }
-          })
-          previousState = {...cloneDeep($synState)}
-        }
+        // console.log("0011", appliedCommandIds, command.uniqueId)
+        // let newCommands = $synState.commands.filter(command => !appliedCommandIds.includes(command.uniqueId))
+        // if (newCommands.length > 0) {
+        //   newCommands.forEach(command => {
+        //     if ( !["thread-comment-ui.operation.set-active-comment", "doc.operation.set-selections"].includes(command.id)) {
+        //       console.log("executing command", command)
+        //       univerAPI.executeCommand(command.id, command.params)
+        //       appliedCommandIds.push(command.uniqueId)
+        //     }
+        //   })
+        //   // previousState = {...cloneDeep($synState)}
+        // }
         // saveDocument();
       } else {
         console.log("no save");
       }
-    }, 100);
+    }, 0);
 
 
   function removeSymbolFields(obj) {
@@ -248,57 +262,106 @@
       return obj
     }
 
+  function newCursorPosition (externalCommand, lastCursorPosition) {
+    console.log("last internal command", lastCursorPosition)
+    console.log("external command", externalCommand)
+    let lastLocalStartPosition = lastCursorPosition.startOffset
+    try {
+      let externalLength = externalCommand.params?.actions[1]?.e[1]?.len
+      let externalStartPosition = externalCommand.params?.actions[1]?.e[0]?.len
+      let externalTrueStartPosition = externalStartPosition// - externalLength
+      console.log("external true start position", externalTrueStartPosition)
+      console.log("local start position", lastLocalStartPosition)
+      if (externalTrueStartPosition < lastLocalStartPosition) {
+        return [lastLocalStartPosition + externalLength, lastLocalStartPosition + externalLength]
+      } else {
+        return [lastLocalStartPosition, lastLocalStartPosition]
+      }
+    } catch (e) {
+      console.log("last local start position", lastLocalStartPosition)
+      return [lastLocalStartPosition, lastLocalStartPosition]
+    }
+  }
+
   const updateDocument = async () => {
-    const activeDocument = univerAPI.getActiveDocument()
-    const localState = activeDocument.getSnapshot();
-    console.log("saveData", localState)
-    const spreadsheet = $synState.spreadsheet
-    console.log("spreadsheet", spreadsheet)
-    console.log(lastReceivedState)
-    let dataStream0 = lastReceivedState.spreadsheet.body.dataStream;
-    let dataStream1 = spreadsheet.body.dataStream;
-    let dataStream2 = localState.body.dataStream;
-    console.log("dataStream0", dataStream0)
-    console.log("dataStream1", dataStream1)
-    console.log("dataStream2", dataStream2)
+    let newCommands = $synState.commands.filter(command => !appliedCommandIds.includes(command.uniqueId))
+    // console.log("new commands", newCommands, "of", $synState.commands, "because", appliedCommandIds)
+    // console.log("sheet is", currentUniverEditable.snapshot.body.dataStream, $synState.spreadsheet.body.dataStream)
+    
+    if (newCommands.length > 0) {
+      console.log("all commands that are new", newCommands.map(command => command.uniqueId))
+      newCommands.forEach(command => {
+        // if ( !["thread-comment-ui.operation.set-active-comment", "doc.operation.set-selections", "doc.command.insert-text", "doc.operation.set-selections"].includes(command.id)) {
+        // if ( !["thread-comment-ui.operation.set-active-comment", "doc.operation.set-selections"].includes(command.id)) {
+          // if command is not in the list of commands that have been applied
+          if (appliedCommandIds.includes(command.uniqueId)) {
+            console.log("command already applied", command.uniqueId)
+          } else {
+          // console.log("executing command", command.params?.body?.dataStream)
+            // console.log("command not yet applied, executing command", command)
+            appliedCommandIds.push(command.uniqueId)
+            // if more than 40 commands, rese
+            if (appliedCommandIds.length > 80) {
+              const itemsToRemove = appliedCommandIds.length - 80;
+              appliedCommandIds.splice(0, itemsToRemove);
+            }
 
-    // Step 1: Find differences between dataStream1 and dataStream2
-    const diffs1 = DMP.diff_main(dataStream0, dataStream1);
-    const diffs2 = DMP.diff_main(dataStream0, dataStream2);
-
-    console.log("diffs 1 and 2", diffs1, diffs2)
-
-    const allDiffs = diffs1.concat(diffs2);
-    const uniqueDiffs = allDiffs.filter((diff, index, self) =>
-      index === self.findIndex((t) => (
-        t[0] === diff[0] && t[1] === diff[1]
-      ))
-    );
-
-    // Step 2: Create patches based on the differences
-    const patches = DMP.patch_make(dataStream0, uniqueDiffs);
-
-    console.log("hi")
-    patches.forEach(patch => {
-      console.log("patch", patch)
-
-      patch.diffs.forEach(diff => {
-        console.log("diff", diff)
-        if (diff[0] === 1) {
-          console.log("insert", activeDocument, univerAPI)
-          univerAPI.executeCommand("doc.command.delete-left")
-        } else if (diff[0] === -1) {
-          console.log("delete")
-          // univerAPI.executeCommand('doc.command.delete-text', diff[1])
-          // activeDocument.deleteText(diff[1].length)
-        } else {
-          // console.log("equal")
-          // activeDocument.insertText(diff[1])
-        }
+            console.log("univer doc", currentUniverEditable)
+            console.log("last position", lastCursorPosition)
+            // command.params.textRanges[0].endOffset = 0
+            // command.params.textRanges[0].startOffset = 0
+            console.log("set cursor to", lastCursorPosition, "from", command.params.textRanges, command)
+            let [start, end] = newCursorPosition(command, lastCursorPosition)
+            if (!start || !end) {
+              console.log("no start or end")
+              start = 0
+              end = 0
+            }
+            try {
+              if (command.params.ranges != undefined) {
+                console.log("setting ranges", command)
+                command.params.ranges[0] = {...lastCursorPosition, startOffset: start, endOffset: end}
+                console.log("new command", command)
+                lastCursorPosition = command.params.textRanges[0]
+              } else if (command.params.textRanges != undefined) {
+                console.log("setting text ranges", command)
+                command.params.textRanges[0] = {...lastCursorPosition, startOffset: start, endOffset: end}
+                console.log("new command", command)
+                lastCursorPosition = command.params.textRanges[0]
+              }
+            } catch (e) {
+              console.log("error setting ranges", e)
+            }
+            univerAPI.executeCommand(command.id, command.params, {"fromCollab": true})
+            // let actions: JSONXActions = command.params.actions
+            // currentUniverEditable.apply(actions)
+          }
+        // } else {
+        //   appliedCommandIds.push(command.uniqueId)
+        // }
       })
-      
-    })
-    lastReceivedState = cloneDeep($synState)
+
+    // if sheet is not the same between local and incoming, update local
+    // TODO: check more than just datastream
+    console.log("=======)", JSON.stringify(currentUniverEditable.snapshot))
+    if (JSON.stringify(currentUniverEditable.snapshot.body) != JSON.stringify($synState.spreadsheet.body)) {
+    // if (currentUniverEditable.snapshot != $synState.spreadsheet) {
+      console.log("-------------------------------- FULL RESET --------------------------------")
+      // reload pageeet
+      currentUniverEditable.reset($synState.spreadsheet)
+      // currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_DOC, $synState.spreadsheet);
+    }
+
+
+      // console.log("---last beg----", lastCursorCommand)
+      // univerAPI.executeCommand(lastCursorCommand.id, lastCursorCommand.params, {"fromCollab": true})
+      // console.log("---last end----", lastCursorCommand)
+      // console.log(lastCursorCommand.params.ranges[0].endOffset)
+      // const memoryCursor = new MemoryCursor();
+      // memoryCursor.reset();
+      // memoryCursor.moveCursorTo(lastCursorCommand.params.ranges[0].endOffset);
+      // previousState = {...cloneDeep($synState)}
+    }
   }
 
   const updateSheet = async () => {
@@ -381,7 +444,7 @@
   let store: CalcyStore = getStore();
   const univerAPI = FUniver.newAPI(univer);
   
-  let previousState = {};
+  // let previousState = {};
   $: uiProps = store.uiProps
   // $: participants = activeBoard.participants()
   $: activeHashB64 = store.boardList.activeBoardHashB64;
@@ -400,22 +463,35 @@
     };
   }
 
+  let toCommit: any[] = []
+  const debouncedApplyCommandBatch = debounce(async(commands) => {
+    // console.log("applying batch", commands)
+    activeBoard.requestChanges([{type: 'execute-command-batch', commands: toCommit, documentValue: changeUndefinedToEmptyString(removeSymbolFields(currentUniverEditable.snapshot))}])
+    toCommit = []
+    // activeBoard.requestChanges([{type: 'set-spreadsheet', spreadsheet: changeUndefinedToEmptyString(removeSymbolFields($synState.spreadsheet))}])
+    // console.log("applied batch")
+  }, 100);
+
   // Your update logic wrapped in a debounced function
   const debouncedUpdate = debounce(async() => {
     if ($synState.type == "spreadsheet") {
       updateSheet();
     } else if ($synState.type == "document") {
-      console.log("commands -- ", $synState.commands)
-      // await updateDocument();
+      // console.log("commands -- ", $synState.commands)
+      if ($synState.type == 'document') {
+        await updateDocument();
+      }
     } else {
       console.log("no update");
     }
-  }, 400);
+  }, 0);
 
 
   // HANDLE INCOMING EXECUTING COMMANDS
   $: if ($synState && univerAPI) {
-    debouncedMaybeSave();
+    // debouncedMaybeSave();
+    debouncedUpdate();
+    // updateDocument();
   }
 
   const saveDocument = async () => {
@@ -427,7 +503,7 @@
       spreadsheet: docSnapshot
     }]
     activeBoard.requestChanges(changes)
-    previousState = {...cloneDeep($synState)}
+    // previousState = {...cloneDeep($synState)}
   }
 
   const saveSheet = async () => {
@@ -440,7 +516,7 @@
       spreadsheet: sheetData
     }]
     activeBoard.requestChanges(changes)
-    previousState = {...cloneDeep($synState)}
+    // previousState = {...cloneDeep($synState)}
   }
 
   const closeBoard = async () => {
@@ -474,27 +550,46 @@
 
   onMount(async () => {
     console.log("PARTICIPANTS", participants)
-    console.log("PROFILES", profiles)
+    console.log("MY PROFILE", mockUser, myProfile)
+    let synSavedProfiles = $synState.users
+    console.log("SYN SAVED PROFILES", synSavedProfiles)
+    let userIdFound = false
+    synSavedProfiles.forEach(profile => {
+      if (profile.userID != mockUser.userID) {
+        userManagerService.addUser(profile)
+      } else {
+        userIdFound = true
+      }
+    })
+    // add-user request to syn
+    if (!userIdFound) {
+      activeBoard.requestChanges([{type: 'add-user', user: mockUser}])
+    }
 
-    console.log("previous state set", previousState)
     const savedBoard = await activeBoard.readableState()
     console.log("THIS IS THE BOARD", savedBoard)
     console.log($synState.spreadsheet)
     if ($synState.type === "spreadsheet") {
-      console.log("spreadsheet")
+      // console.log("spreadsheet")
       currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_SHEET, $synState.spreadsheet);
     } else if ($synState.type === "document") {
       console.log("not spreadsheet")
       currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_DOC, $synState.spreadsheet);
+      console.log("--------------", JSON.stringify($synState.spreadsheet))
+      $synState.commands?.forEach(command => {
+        // console.log("executing command", command)
+        appliedCommandIds.push(command.uniqueId)
+      })
+      userManagerService.setCurrentUser(mockUser);
     } else {
-      console.log("not spreadsheet")
+      // console.log("not spreadsheet")
       currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_SLIDE, $synState.spreadsheet);
     }
     console.log(currentUniverEditable)
 
-    previousState = cloneDeep($synState)
+    // previousState = cloneDeep($synState)
     lastReceivedState = cloneDeep($synState)
-    console.log("clonedeep", previousState)
+    // console.log("clonedeep", previousState)
 
     if ($synState.type == "spreadsheet") {
       window.addEventListener("keydown", checkKey);
@@ -503,21 +598,46 @@
       window.addEventListener("keydown", checkKey);
     }
 
-    funiver = FUniver.newAPI(univer);
-    console.log("funiver", funiver)
+    // funiver = FUniver.newAPI(univer);
     // execute all commands
-    $synState.commands?.forEach(command => {
-      console.log("executing command", command)
-      funiver.executeCommand(command.id, command.params)
-    })
+    // $synState.commands?.forEach(command => {
+    //   console.log("executing command", command)
+    //   funiver.executeCommand(command.id, command.params)
+    // })
 
-    funiver.onCommandExecuted((command) => {
-      const { id, type, params } = command;
-      console.log("on before", id, type, params, command)
-      previousState.commands?.push(command)
-      activeBoard.requestChanges([{type: 'execute-command', command: removeSymbolFields(command)}])
-      console.log("watch commands", activeBoard)
-      // Custom logic executed before the command is executed
+    // let toCommit = []
+    // funiver.onBeforeCommandExecute((command, options) => {
+    univerAPI.onCommandExecuted((command, options) => {
+      if (!options?.fromCollab && command.params?.trigger != "univer.command.undo") {
+        // if (!["thread-comment-ui.operation.set-active-comment", "doc.operation.set-selections", "doc.command.insert-text", "doc.command.inner-cut", "doc.command.delete-left", "doc.command.delete-text", "doc.command.inner-paste", "docs.operation.toggle-comment-panel", "docs.operation.show-comment-panel", "doc.operation.toggle-comment-panel", "doc.operation.show-comment-panel", "docs.operation.start-add-comment", "docs.command.add-comment", "thread-comment.command.add-comment"]
+        // .includes(command.id)) {
+        if (["doc.mutation.rich-text-editing", "thread-comment.mutation.add-comment"].includes(command.id)) {
+          // const undoCommand = {
+          //   "id": "univer.command.undo",
+          //   "type": 0,
+          // }
+          // univerAPI.executeCommand(undoCommand.id, undefined, {"fromCollab": true})
+          const uniqueId = uuidv1()
+          let commandWithId = {...removeSymbolFields(command), uniqueId: uniqueId}
+          // console.log("command with id", commandWithId)
+          appliedCommandIds.push(uniqueId)
+
+          // activeBoard.requestChanges([{type: 'execute-command', command: changeUndefinedToEmptyString(commandWithId)}])
+
+          if (commandWithId.params) {
+            toCommit.push(changeUndefinedToEmptyString(removeSymbolFields(commandWithId)))
+          }
+          debouncedApplyCommandBatch(toCommit)
+
+        } else if (command.id === "doc.operation.set-selections") {
+          // console.log("cursor command", command)
+          lastCursorPosition = command.params.ranges[0]
+        } else {
+          // console.log("not including command", command)
+        }
+      }
+      // don't finish
+      return false;
     })
 
     return () => {
@@ -541,12 +661,22 @@
         <button  class="board-button close" on:click={closeBoard} title="Close">
           <SvgIcon icon=faClose size="16px"/>
         </button>
-        <ClickEdit
-            text={$synState.name}
-            handleSave={(value) => {
-              activeBoard.requestChanges([{type: 'set-name', name: value}])
-            }}
-          />
+        <input
+          type="text"
+          value={$synState.name}
+          on:input={(e) => {
+            activeBoard.requestChanges([{type: 'set-name', name: e.target.value}])
+          }}
+          on:blur={(e) => {
+            activeBoard.requestChanges([{type: 'set-name', name: e.target.value}])
+          }}
+          on:keydown={(e) => {
+            if (e.key === "Enter") {
+              e.target.blur()
+            }
+          }}
+          style="font-size: 16px; font-weight: bold; border: none; background: transparent; color: rgba(86, 92, 108, 1.0);"
+        />
         <sl-dropdown class="board-options board-menu" skidding=15>
           <sl-button slot="trigger"   class="board-button settings" caret>&nbsp;</sl-button>
            <!-- editable name input -->
@@ -611,8 +741,8 @@
   </div>
   {#if $synState}
 
-  <!-- on:click={debouncedMaybeSave} -->
-   <div
+  <div
+    on:click={debouncedMaybeSave}
     id="spreadsheet" style="height:100%; position: relative;"></div>
   {/if}
 </div>

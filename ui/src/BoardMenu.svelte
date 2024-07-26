@@ -70,9 +70,9 @@
         {#if newBoardDropdown}
             <div class="new-board" on:click={()=>addSpreadsheet()} title="Spreadsheet"><SvgIcon color="white" size=25px icon=spreadsheet style="margin-left: 15px;"/><span>Spreadsheet</span></div>
             <div class="new-board" on:click={()=>addDocument()} title="Board"><SvgIcon color="white" size=25px icon=textDocument style="margin-left: 15px;"/><span>Document</span></div>
-            <div class="new-board" on:click={()=>addPresentation()} title="Presentation"><SvgIcon color="white" size=25px icon=presentation style="margin-left: 15px;"/><span>Presentation</span></div>
+            <div class="new-board" on:click={()=>{}} title="Presentation"><SvgIcon color="white" size=25px icon=presentation style="margin-left: 15px;"/><span>Presentation <small style="font-size: 11px; line-height: 12px; top: -5px; position: relative;">(comming soon)</small></span></div>
             <!-- upload/import -->
-            <div class="new-board" on:click={()=>addDocument()} title="Upload"><SvgIcon color="white" size=25px icon=faFileImport style="margin-left: 15px;"/><span>Import file</span></div>
+            <!-- <div class="new-board" on:click={()=>importFile()} title="Upload"><SvgIcon color="white" size=25px icon=faFileImport style="margin-left: 15px;"/><span>Import file</span></div> -->
         {/if}
         </div>
 

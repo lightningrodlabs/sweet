@@ -19,8 +19,10 @@ export interface BoardState {
   props: BoardProps;
   spreadsheet: IWorkbookData;
   document: IWorkbookData;
-  boundTo: Array<WALUrl>
-  commands: Array<any>
+  boundTo: Array<WALUrl>;
+  commands: Array<any>;
+  lastAppliedCommand: any;
+  users: Array<any>;
 }
   
   export type BoardDelta =
@@ -43,6 +45,15 @@ export interface BoardState {
     | {
       type: "execute-command";
       command: any;
+    }
+    | {
+      type: "execute-command-batch";
+      commands: Array<any>;
+      documentValue: IWorkbookData;
+    }
+    | {
+      type: "add-user";
+      user: any;
     };
 
 
@@ -55,7 +66,9 @@ export interface BoardState {
         boundTo: [],
         spreadsheet: null,
         document: null,
-        commands: []
+        commands: [],
+        lastAppliedCommand: null,
+        users: []
       }
       if (init) {
         Object.assign(state, init);
@@ -75,6 +88,9 @@ export interface BoardState {
           if (delta.state.spreadsheet !== undefined) state.spreadsheet = delta.state.spreadsheet
           if (delta.state.props !== undefined) state.props = delta.state.props
           if (delta.state.boundTo !== undefined) state.boundTo = delta.state.boundTo
+          if (delta.state.commands !== undefined) state.commands = delta.state.commands
+          if (delta.state.lastAppliedCommand !== undefined) state.lastAppliedCommand = delta.state.lastAppliedCommand
+          if (delta.state.users !== undefined) state.users = delta.state.users
           break;
         case "set-spreadsheet":
           state.spreadsheet = delta.spreadsheet
@@ -87,6 +103,24 @@ export interface BoardState {
           break;
         case "execute-command":
           state.commands.push(delta.command)
+          if (state.commands.length > 30) {
+            const itemsToRemove = state.commands.length - 30;
+            state.commands.splice(0, itemsToRemove);
+          }
+          break;
+        case "execute-command-batch":
+          state.commands.push(...delta.commands)
+          state.spreadsheet = delta.documentValue
+          if (state.commands.length > 40) {
+            const itemsToRemove = state.commands.length - 40;
+            state.commands.splice(0, itemsToRemove);
+          }
+          break;
+        case "add-user":
+          console.log("ADDING USER", delta.user)
+          console.log("was", state.users)
+          state.users.push(delta.user)
+          break;
       }
     },
   };

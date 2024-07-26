@@ -303,17 +303,14 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         // univer.registerPlugin(UniverDocsDrawingUIPlugin);
 
         if (options.type == "spreadsheet") {
-            console.log("1111")
             const newSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {});
             options.spreadsheet = newSheet.save()
         } else if (options.type == "document") {
-            console.log("2222")
             let newDoc = univer.createUnit(UniverInstanceType.UNIVER_DOC, {});
             if (!options.spreadsheet) {
                 options.spreadsheet = newDoc.snapshot
             }
         } else {
-            console.log("3333")
             let newPres = univer.createUnit(UniverInstanceType.UNIVER_SLIDE, {});
             if (!options.spreadsheet) {
                 options.spreadsheet = newPres
