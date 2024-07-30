@@ -89,14 +89,17 @@
               }              
               break;
             case "asset":
-              switch (weClient.renderInfo.view.roleName) {
+              switch (weClient.renderInfo.view.recordInfo.roleName) {
                 case "calcy":
-                  switch (weClient.renderInfo.view.integrityZomeName) {
+                  switch (weClient.renderInfo.view.recordInfo.integrityZomeName) {
                     case "syn_integrity":
-                      switch (weClient.renderInfo.view.entryType) {
+                      switch (weClient.renderInfo.view.recordInfo.entryType) {
                         case "document":
                           renderType = RenderType.WAL
                           wal = weClient.renderInfo.view.wal
+                          break;
+                        case "spreadsheet":
+                          renderType = RenderType.WAL
                           break;
                         default:
                           throw new Error("Unknown entry type:"+weClient.renderInfo.view.entryType);

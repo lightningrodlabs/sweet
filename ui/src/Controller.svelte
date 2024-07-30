@@ -21,6 +21,7 @@
       roleName,
     );
     let synStore: SynStore = store.synStore
+    let resetVar = true;
 
     $: activeBoardHash = store.boardList.activeBoardHash
     $: activeBoard = store.boardList.activeBoard
@@ -36,6 +37,14 @@
     setContext('store', {
       getStore: () => store,
     });
+
+    function resetPane() {
+      resetVar = false
+      setTimeout(() => {
+        resetVar = true
+      }, 10)
+    }
+
     const DEFAULT_KD_BG_IMG = "none"
     //const DEFAULT_KD_BG_IMG = "https://img.freepik.com/free-photo/studio-background-concept-abstract-empty-light-gradient-purple-studio-room-background-product-plain-studio-background_1258-54461.jpg"
     const NO_BOARD_IMG = "none"
@@ -78,7 +87,9 @@
           {#if $profile?.status == "complete"}
             {#if $profiles?.status == "complete"}
               {#if $activeBoardHash !== undefined && profiles}
-                <CalcyPane activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/>
+                {#if resetVar}
+                  <CalcyPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/>
+                {/if}
               {/if}
             {/if}
           {/if}
