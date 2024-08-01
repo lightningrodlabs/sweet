@@ -22,6 +22,7 @@ export interface BoardState {
   boundTo: Array<WALUrl>;
   commands: Array<any>;
   lastAppliedCommand: any;
+  commentCommands: Array<any>;
   users: Array<any>;
 }
   
@@ -54,6 +55,10 @@ export interface BoardState {
     | {
       type: "add-user";
       user: any;
+    }
+    | {
+      type: "add-comment";
+      comment: any;
     };
 
 
@@ -68,6 +73,7 @@ export interface BoardState {
         document: null,
         commands: [],
         lastAppliedCommand: null,
+        commentCommands: [],
         users: []
       }
       if (init) {
@@ -91,6 +97,7 @@ export interface BoardState {
           if (delta.state.commands !== undefined) state.commands = delta.state.commands
           if (delta.state.lastAppliedCommand !== undefined) state.lastAppliedCommand = delta.state.lastAppliedCommand
           if (delta.state.users !== undefined) state.users = delta.state.users
+          if (delta.state.commentCommands !== undefined) state.commentCommands = delta.state.commentCommands
           break;
         case "set-spreadsheet":
           state.spreadsheet = delta.spreadsheet
@@ -120,6 +127,10 @@ export interface BoardState {
           console.log("ADDING USER", delta.user)
           console.log("was", state.users)
           state.users.push(delta.user)
+          break;
+        case "add-comment":
+          if (!state.commentCommands) {state.commentCommands = []}
+          state.commentCommands.push(delta.comment)
           break;
       }
     },

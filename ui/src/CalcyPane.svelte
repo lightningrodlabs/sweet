@@ -452,19 +452,26 @@
 
 
   const updateDocument = async () => {
+    let newCommentCommands = $synState.commentCommands.filter(comment => !appliedCommandIds.includes(comment.uniqueId))
+    newCommentCommands.forEach(comment => {
+      // execute comment
+      univerAPI.executeCommand(comment.id, comment.params, {"fromCollab": true})
+      appliedCommandIds.push(comment.uniqueId)
+    })
+
     let newCommands = $synState.commands.filter(command => !appliedCommandIds.includes(command.uniqueId))
-    console.log("new commands", newCommands)
+    // console.log("new commands", newCommands)
     // console.log("new commands", newCommands, "of", $synState.commands, "because", appliedCommandIds)
     // console.log("sheet is", currentUniverEditable.snapshot.body.dataStream, $synState.spreadsheet.body.dataStream)
     
     if (newCommands.length > 0) {
-      console.log("all commands that are new", newCommands.map(command => command.uniqueId))
+      // console.log("all commands that are new", newCommands.map(command => command.uniqueId))
       newCommands.forEach(command => {
         // if ( !["thread-comment-ui.operation.set-active-comment", "doc.operation.set-selections", "doc.command.insert-text", "doc.operation.set-selections"].includes(command.id)) {
         // if ( !["thread-comment-ui.operation.set-active-comment", "doc.operation.set-selections"].includes(command.id)) {
           // if command is not in the list of commands that have been applied
           if (appliedCommandIds.includes(command.uniqueId)) {
-            console.log("command already applied", command.uniqueId)
+            // console.log("command already applied", command.uniqueId)
           } else {
           // console.log("executing command", command.params?.body?.dataStream)
             // console.log("command not yet applied, executing command", command)
@@ -483,26 +490,21 @@
             try {
               // // if authorID is someone else, calculate cursor end position
               // if (command.authorId != mockUser.userID) {
-                console.log("999", command.authorId, mockUser.userID)
+                // console.log("999", command.authorId, mockUser.userID)
                 // console.log("set cursor to", lastCursorPosition, "from", command.params.textRanges, command)
                 let [start, end] = newCursorPosition(command, lastCursorPosition)
-                console.log("new cursor position", start, end)
+                // console.log("new cursor position", start, end)
                 if (!start || !end) {
-                  console.log("no start or end")
+                  // console.log("no start or end")
                   start = 0
                   end = 0
                 }
                 try {
-                  console.log("setting ranges 0", command)
                   if (command.params.ranges != undefined) {
-                    console.log("setting ranges", command)
                     command.params.ranges[0] = {...lastCursorPosition, startOffset: start, endOffset: end}
-                    console.log("new command", command)
                     lastCursorPosition = command.params.textRanges[0]
                   } else if (command.params.textRanges != undefined) {
-                    console.log("setting text ranges", command)
                     command.params.textRanges[0] = {...lastCursorPosition, startOffset: start, endOffset: end}
-                    console.log("new command", command)
                     lastCursorPosition = command.params.textRanges[0]
                   }
                 } catch (e) {
@@ -516,7 +518,7 @@
             }
 
             try {
-              console.log("position changes", positionChanges)
+              // console.log("position changes", positionChanges)
               positionChanges.forEach(change => {
                 let currentCommandPositionChange: PositionChange;
                 if (command.params.actions[1].e[1]?.len) {
@@ -527,11 +529,11 @@
                     fromPosition: 0}
                 }
                 
-                console.log("(range)", change.fromPosition, currentCommandPositionChange.fromPosition)
+                // console.log("(range)", change.fromPosition, currentCommandPositionChange.fromPosition)
                 
                 // if change is before current command, change insert position
                 if (change.fromPosition < currentCommandPositionChange.fromPosition) {
-                  console.log("changing insert position", currentCommandPositionChange.fromPosition, change.addOrRemove)
+                  // console.log("changing insert position", currentCommandPositionChange.fromPosition, change.addOrRemove)
                   command.params.actions[1].e[0].len = currentCommandPositionChange.fromPosition + change.addOrRemove
                   
                   // console.log("****0****")
@@ -552,7 +554,7 @@
             }
 
             try {
-              console.log("++++ executing command", command)
+              // console.log("++++ executing command", command)
               univerAPI.executeCommand(command.id, command.params, {"fromCollab": true})
 
               let setCursorCommand = {
@@ -608,11 +610,12 @@
     // if sheet is not the same between local and incoming, update local
     // TODO: check more than just datastream
     // console.log("=======)", JSON.stringify(currentUniverEditable.snapshot.body), "=======", JSON.stringify($synState.spreadsheet.body))
+    
     if (JSON.stringify(currentUniverEditable.snapshot.body.dataStream) != JSON.stringify($synState.spreadsheet.body.dataStream)) {
       // currentUniverEditable.snapshot = $synState.spreadsheet
     // if (currentUniverEditable.snapshot != $synState.spreadsheet) {
-      console.log("-------------------------------- FULL RESET --------------------------------")
-      console.log("!", JSON.stringify(currentUniverEditable.snapshot.body.dataStream), JSON.stringify($synState.spreadsheet.body.dataStream))
+      // console.log("-------------------------------- FULL RESET --------------------------------")
+      // console.log("!", JSON.stringify(currentUniverEditable.snapshot.body.dataStream), JSON.stringify($synState.spreadsheet.body.dataStream))
       resetStrikes += 1
       if (resetStrikes > 1) {
         dispatch("reset")
@@ -643,14 +646,14 @@
   }
   let positionChanges: PositionChange[] = []
 
-  const debouncedApplyCommandBatch = debounce(async(commands) => {
+  const debouncedApplyCommandBatch = debounce(async() => {
     // console.log("applying batch", commands)
     // console.log("===", currentUniverEditable.save())
     activeBoard.requestChanges([{type: 'execute-command-batch', commands: toCommit, documentValue: changeUndefinedToEmptyString(removeSymbolFields(currentUniverEditable.getSnapshot()))}])
     toCommit = []
     // activeBoard.requestChanges([{type: 'set-spreadsheet', spreadsheet: changeUndefinedToEmptyString(removeSymbolFields($synState.spreadsheet))}])
     // console.log("applied batch")
-  }, 0);
+  }, 1000);
 
   // Your update logic wrapped in a debounced function
   const debouncedUpdate = debounce(async() => {
@@ -658,13 +661,11 @@
       updateSheet();
     } else if ($synState.type == "document") {
       // console.log("commands -- ", $synState.commands)
-      if ($synState.type == 'document') {
-        await updateDocument();
-      }
+      await updateDocument();
     } else {
       console.log("no update");
     }
-  }, 200);
+  }, 20);
 
   onMount(async () => {
     console.log("PARTICIPANTS", Array.from(participants.entries()))
@@ -722,13 +723,22 @@
     //   funiver.executeCommand(command.id, command.params)
     // })
 
+    $synState.commentCommands.forEach(comment => {
+      // console.log("executing comment", comment)
+      univerAPI.executeCommand(comment.id, comment.params, {"fromCollab": true})
+    })
+
     univerAPI.onBeforeCommandExecute((command, options) => {
+      // univerAPI.onCommandExecuted((command, options) => {
       // console.log("++++++++++++ command", command, "options", options
 
       if (!options?.fromCollab) {
         // command.params?.trigger != "univer.command.undo")
         // if (["doc.mutation.rich-text-editing", "thread-comment.mutation.add-comment", "doc.operation.set-selections"].includes(command.id)) {
-        if (command.id.includes("mutation")) {
+        if (command.id.includes("comment") && command.id.includes("mutation")) {
+          activeBoard.requestChanges([{type: 'add-comment', comment: removeSymbolFields(changeUndefinedToEmptyString(command))}])
+        }
+        else if (command.id.includes("mutation")) {
         // if (command.id.includes("command")) {
         // if (!["doc.operation.set-selections", "thread-comment-ui.operation.set-active-comment", "doc.operation.set-selections", "doc.command.insert-text", "doc.command.inner-cut", "doc.command.delete-left", "doc.command.delete-text", "doc.command.inner-paste", "docs.operation.toggle-comment-panel", "docs.operation.show-comment-panel", "doc.operation.toggle-comment-panel", "doc.operation.show-comment-panel", "docs.operation.start-add-comment", "docs.command.add-comment", "thread-comment.command.add-comment"].includes(command.id)) {
           console.log("command", command, "options", options)
@@ -755,13 +765,13 @@
             newPositionChange.addOrRemove = -newPositionChange.addOrRemove
           }
 
-          console.log("new position change", newPositionChange, command)
+          // console.log("new position change", newPositionChange, command)
           positionChanges.push(newPositionChange)
 
           if (commandWithId.params) {
             toCommit.push(changeUndefinedToEmptyString(removeSymbolFields(commandWithId)))
           }
-          debouncedApplyCommandBatch(toCommit)
+          debouncedApplyCommandBatch()
           
           // lastCursorPosition = command.params.ranges[0]
           // throw new Error('Editing is prohibited')

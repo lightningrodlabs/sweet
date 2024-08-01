@@ -72,7 +72,7 @@
 </script>
 
 
-<sl-dialog label="Xylem Office UI v0.10.1 for DNA v0.10.0-dev.0" bind:this={dialog} width={600} >
+<sl-dialog label="Xylem Office UI v0.10.2 for DNA v0.10.0-dev.0" bind:this={dialog} width={600} >
     <div class="about">
         <p>Xylem Office is a demonstration Holochain app built by Lightning Rod Labs.</p>
         <p> <b>Developers:</b>
