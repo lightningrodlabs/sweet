@@ -3,7 +3,7 @@
     import { CalcyStore } from './store'
     import { setContext } from 'svelte';
     import type { AppClient, EntryHash } from '@holochain/client';
-    import type { SynStore } from '@holochain-syn/store';
+    import type { OTSynStore } from '@holochain-syn/core';
     import type { ProfilesStore } from "@holochain-open-dev/profiles";
     import type { WeaveClient } from '@lightningrodlabs/we-applet';
     import { onMount } from 'svelte';
@@ -21,7 +21,7 @@
       client,
       roleName,
     );
-    let synStore: SynStore = store.synStore
+    let synStore: OTSynStore = store.synStore
     store.boardList.setActiveBoard(board)
     $: activeBoardHash = store.boardList.activeBoardHash
     $: activeBoard = store.boardList.activeBoard

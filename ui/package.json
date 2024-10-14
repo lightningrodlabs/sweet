@@ -13,7 +13,7 @@
     "@holochain-open-dev/profiles": "^0.400.0-dev.1",
     "@holochain-open-dev/stores": "^0.400.0-dev.1",
     "@holochain-open-dev/utils": "^0.400.0-dev.0",
-    "@holochain-syn/core": "^0.400.0-dev.0",
+    "@holochain-syn/core": "file:../../syn/packages/core",
     "@holochain/client": "^0.18.0-dev.0",
     "@lightningrodlabs/we-applet": "^0.17.0",
     "@lightningrodlabs/we-elements": "^0.6.0-dev.0",

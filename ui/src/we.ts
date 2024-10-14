@@ -1,4 +1,4 @@
-import { DocumentStore, SynClient, SynStore, WorkspaceStore } from '@holochain-syn/core';
+import { DocumentStore, SynClient, OTSynStore, OTWorkspaceStore } from '@holochain-syn/core';
 import type { BoardEphemeralState, BoardState } from './board';
 import { asyncDerived, pipe, sliceAndJoin, toPromise } from '@holochain-open-dev/stores';
 import { BoardType } from './boardList';
@@ -61,11 +61,11 @@ export const appletServices: AppletServices = {
       let roleName = recordInfo.roleName;
       if (entryType == "document") {
         const synClient = new SynClient(appletClient, roleName, ZOME_NAME);
-        const synStore = new SynStore(synClient);
+        const synStore = new OTSynStore(synClient);
         const documentHash = wal.hrl[1]
         const docStore = new DocumentStore<BoardState, BoardEphemeralState> (synStore, documentHash)
         const workspaces = await toPromise(docStore.allWorkspaces)
-        const workspace = new WorkspaceStore(docStore, Array.from(workspaces.keys())[0])
+        const workspace = new OTWorkspaceStore(docStore, Array.from(workspaces.keys())[0])
         const latestState = await toPromise(workspace.latestState)
 
 
@@ -84,7 +84,7 @@ export const appletServices: AppletServices = {
       searchFilter: string
     ): Promise<Array<WAL>> => {
         const synClient = new SynClient(appletClient, ROLE_NAME, ZOME_NAME);
-        const synStore = new SynStore(synClient);
+        const synStore = new OTSynStore(synClient);
         const boardHashes = asyncDerived(synStore.documentsByTag.get(BoardType.active),x=>Array.from(x.keys()))
             
         const boardData = new LazyHoloHashMap( documentHash => {
@@ -92,7 +92,7 @@ export const appletServices: AppletServices = {
     
             const workspace = pipe(docStore.allWorkspaces,
                 workspaces => {
-                    return new WorkspaceStore(docStore, Array.from(workspaces.keys())[0])
+                    return new OTWorkspaceStore(docStore, Array.from(workspaces.keys())[0])
                 }
             ) 
             const latestState = pipe(workspace, 

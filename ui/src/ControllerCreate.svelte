@@ -2,10 +2,9 @@
   import { CalcyStore } from './store'
   import { setContext } from 'svelte';
   import type { AppAgentClient } from '@holochain/client';
-  import { SynStore } from '@holochain-syn/store';
+  import { OTSynStore, SynClient } from '@holochain-syn/core';
   import type { ProfilesStore } from "@holochain-open-dev/profiles";
   import type { WeClient } from '@lightningrodlabs/we-applet';
-  import { SynClient } from '@holochain-syn/core';
   import { getMyDna } from './util';
   import { Board } from './board';
   export let roleName = ""
@@ -19,7 +18,7 @@
     client,
     roleName,
   );
-  let synStore: SynStore = store.synStore
+  let synStore: OTSynStore = store.synStore
   setContext('synStore', {
     getStore: () => synStore,
   });
@@ -45,7 +44,7 @@ let disabled = true
             disabled={disabled}
             on:click={async ()=>{
             try {
-              const synStore = new SynStore(new SynClient(client, roleName));
+              const synStore = new OTSynStore(new SynClient(client, roleName));
               //const hrlB64 = hrlWithContextToB64(attachToHrlWithContext)
               const board = await Board.Create(synStore, {/*boundTo:[hrlB64]*/name: inputElement.value})
               const dnaHash = await getMyDna(roleName, client)

@@ -2,7 +2,7 @@ import { HoloHashMap, LazyHoloHashMap } from "@holochain-open-dev/utils";
 import { derived, get, writable, type Readable, type Writable } from "svelte/store";
 import { type AgentPubKey, type EntryHash, type EntryHashB64, encodeHashToBase64 } from "@holochain/client";
 import {toPromise, type AsyncReadable, pipe, joinAsync, asyncDerived, sliceAndJoin, alwaysSubscribed} from '@holochain-open-dev/stores'
-import { SynStore, WorkspaceStore } from "@holochain-syn/core";
+import { OTSynStore, OTWorkspaceStore } from "@holochain-syn/core";
 import type { ProfilesStore } from "@holochain-open-dev/profiles";
 import { cloneDeep } from "lodash";
 import { Board, type BoardDelta, type BoardState } from "./board";
@@ -73,7 +73,7 @@ export class BoardList {
 
         const board = pipe(docStore.allWorkspaces,
             workspaces => 
-                new Board(docStore,  new WorkspaceStore(docStore, Array.from(workspaces.keys())[0]))
+                new Board(docStore,  new OTWorkspaceStore(docStore, Array.from(workspaces.keys())[0]))
         )
         const latestState = pipe(board, 
             board => board.workspace.latestState
@@ -112,7 +112,7 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
     allAgentBoards: AsyncReadable<ReadonlyMap<AgentPubKey, Array<BoardAndLatestState>>>
     allAuthorAgents: AsyncReadable<AgentPubKey[]>
 
-    constructor(public profilseStore: ProfilesStore, public synStore: SynStore) {
+    constructor(public profilseStore: ProfilesStore, public synStore: OTSynStore) {
         this.allAgentBoards = pipe(this.profilseStore.agentsWithProfile,
             agents=>{
                 console.log("allAgentBoards")

@@ -11,7 +11,7 @@ import {
     type Timestamp,
     type DnaHash,
   } from '@holochain/client';
-import { SynStore,  SynClient} from '@holochain-syn/core';
+import { OTSynStore,  SynClient} from '@holochain-syn/core';
 import { BoardList } from './boardList';
 import TimeAgo from "javascript-time-ago"
 import en from 'javascript-time-ago/locale/en'
@@ -58,7 +58,7 @@ export class CalcyStore {
     service: CalcyService;
     boardList: BoardList;
     updating = false
-    synStore: SynStore;
+    synStore: OTSynStore;
     client: AppAgentClient;
     uiProps: Writable<UIProps>
     unsub: Unsubscriber
@@ -82,7 +82,7 @@ export class CalcyStore {
           this.roleName,
           this.zomeName
         );
-        this.synStore = new SynStore(new SynClient(this.client,this.roleName,this.zomeName))
+        this.synStore = new OTSynStore(new SynClient(this.client,this.roleName,this.zomeName))
         this.boardList = new BoardList(profilesStore, this.synStore)
         this.boardList.activeBoard.subscribe((board)=>{
             if (this.unsub) {

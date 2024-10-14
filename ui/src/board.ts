@@ -1,4 +1,4 @@
-import type { DocumentStore, SessionStore, WorkspaceStore, SynStore } from "@holochain-syn/core";
+import type { OTDocumentStore, OTSessionStore, OTWorkspaceStore, OTSynStore } from "@holochain-syn/core";
 import { get, type Readable } from "svelte/store";
 import { v1 as uuidv1 } from "uuid";
 import { type AgentPubKey, type EntryHash, type EntryHashB64, encodeHashToBase64, type AgentPubKeyB64, type Timestamp } from "@holochain/client";
@@ -142,14 +142,14 @@ export type BoardStateData = {
 }
   
 export class Board {
-  public session: SessionStore<BoardState,BoardEphemeralState> | undefined
+  public session: OTSessionStore<BoardState,BoardEphemeralState> | undefined
   public hashB64: EntryHashB64
 
-  constructor(public document: DocumentStore<BoardState, BoardEphemeralState>, public workspace: WorkspaceStore<BoardState,BoardEphemeralState>) {
+  constructor(public document: OTDocumentStore<BoardState, BoardEphemeralState>, public workspace: OTWorkspaceStore<BoardState,BoardEphemeralState>) {
     this.hashB64 = encodeHashToBase64(this.document.documentHash)
   }
 
-  public static async Create(synStore: SynStore, init: Partial<BoardState>|undefined = undefined) {
+  public static async Create(synStore: OTSynStore, init: Partial<BoardState>|undefined = undefined) {
     const initState = boardGrammar.initialState(init)
   
     const documentStore = await synStore.createDocument(initState,{})
