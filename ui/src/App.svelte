@@ -48,19 +48,31 @@
         console.warn("Could not initialize applet hot-reloading. This is only expected to work in a We context in dev mode.")
       }
     }
+    let tokenResp;
     if (!isWeContext()) {
         console.log("adminPort is", adminPort)
         if (adminPort) {
           const url = `ws://localhost:${adminPort}`
           const adminWebsocket = await AdminWebsocket.connect({url: new URL(url)})
-          const x = await adminWebsocket.listApps({})
-          console.log("apps", x)
-          const cellIds = await adminWebsocket.listCellIds()
-          console.log("CELL IDS",cellIds)
-          await adminWebsocket.authorizeSigningCredentials(cellIds[0])
+          console.log("issuing token");
+          tokenResp = await adminWebsocket.issueAppAuthenticationToken({
+            installed_app_id: appId,
+          });
+          console.log("token", tokenResp);
+          const x = await adminWebsocket.listApps({});
+          console.log("apps", x);
+          const cellIds = await adminWebsocket.listCellIds();
+          console.log("CELL IDS", cellIds);
+          await adminWebsocket.authorizeSigningCredentials(cellIds[0]);
         }
-        console.log("appPort and Id is", appPort, appId)
-        client = await AppWebsocket.connect(appId, {url: new URL(url)})
+        console.log("appPort and Id is", appPort, appId);
+        // const params: AppWebsocketConnectionOptions = { url: new URL(url) };
+        const params = { url: new URL(url) };
+        console.log("params", params);
+        if (tokenResp) params.token = tokenResp.token;
+        console.log("connecting to app port at:", params.url);
+        client = await AppWebsocket.connect(params);
+        console.log("client", client);
         profilesClient = new ProfilesClient(client, appId);
     }
     else {
@@ -178,6 +190,7 @@
 {:else}
 <div class="loading"><div class="loader"></div></div>
 {/if}
+
 
 <style>
 .welcome-text {

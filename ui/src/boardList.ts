@@ -30,7 +30,7 @@ import { UniverSheetsUIPlugin } from "@univerjs/sheets-ui";
 import { UniverUIPlugin } from "@univerjs/ui";
 
 import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
-import { UniverDebuggerPlugin } from '@univerjs/debugger';
+// import { UniverDebuggerPlugin } from '@univerjs/debugger';
 // import { UniverDocsDrawingUIPlugin } from '@univerjs/docs-drawing-ui';
 
 import { IThreadCommentMentionDataService, UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
@@ -258,7 +258,7 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         // core plugins
         univer.registerPlugin(UniverRenderEnginePlugin);
         univer.registerPlugin(UniverFormulaEnginePlugin);
-        univer.registerPlugin(UniverDebuggerPlugin);
+        // univer.registerPlugin(UniverDebuggerPlugin);
         // univer.registerPlugin(UniverUIPlugin, {
         //     container: 'app',
         //     footer: false,

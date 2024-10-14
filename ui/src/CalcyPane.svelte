@@ -5,7 +5,7 @@
   import type {  Board, BoardDelta, BoardProps } from "./board";
   import EditBoardDialog from "./EditBoardDialog.svelte";
   import Avatar from "./Avatar.svelte";
-  // import { IRenderManagerService, type ITextReangeWithStyle } from '@univerjs/engine-render';
+  import { RichText, DocumentViewModel, DocumentSkeleton, Documents, IRenderManagerService } from '@univerjs/engine-render';
   import { decodeHashFromBase64,encodeHashToBase64, type Timestamp } from "@holochain/client";
   import { cloneDeep, isEqual } from "lodash";
   import '@shoelace-style/shoelace/dist/components/dropdown/dropdown.js';
@@ -38,7 +38,7 @@
   import SheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US';
   import UIEnUS from '@univerjs/ui/locale/en-US';
 
-  import { LocaleType, LogLevel, Univer, UniverInstanceType, type JSONXActions, JSONX, ICommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor} from '@univerjs/core';
+  import { LocaleType, LogLevel, LocaleService, Univer, UniverInstanceType, type JSONXActions, TextXActionType, TextX, JSONX, ICommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
   import { defaultTheme } from '@univerjs/design';
   import { UniverDocsPlugin, DocSkeletonManagerService } from '@univerjs/docs';
   import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
@@ -48,7 +48,7 @@
   import { UniverUIPlugin } from '@univerjs/ui';
   import { UniverSheetsConditionalFormattingUIPlugin } from '@univerjs/sheets-conditional-formatting-ui';
   import { UniverSheetsThreadCommentPlugin } from '@univerjs/sheets-thread-comment';
-  import { UniverDebuggerPlugin } from '@univerjs/debugger';
+  // import { UniverDebuggerPlugin } from '@univerjs/debugger';
   import { UniverSheetsHyperLinkUIPlugin } from '@univerjs/sheets-hyper-link-ui';
   import { IThreadCommentMentionDataService, UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
   import { UniverThreadCommentPlugin } from '@univerjs/thread-comment';
@@ -68,7 +68,7 @@
   import { UniverSlidesPlugin } from '@univerjs/slides';
   import { UniverSlidesUIPlugin } from '@univerjs/slides-ui';
   import { FUniver } from "@univerjs/facade";
-    import { act } from "react";
+    // import { act } from "react";
 
   export let activeBoard: Board
   export let myProfile;
@@ -82,9 +82,10 @@
   
   const delay = ms => new Promise(res => setTimeout(res, ms));
 
-  let currentUniverEditable;
+  let currentUniverEditable: DocumentDataModel;
   let lastReceivedState;
   let appliedCommandIds = [];
+  let lastKnownCommand
   let lastCursorPosition = null;
   let funiver;
   let resetStrikes = 0;
@@ -161,6 +162,7 @@
   // $: participants = activeBoard.participants()
   $: activeHashB64 = store.boardList.activeBoardHashB64;
   $: synState = activeBoard.readableState()
+  $: synComplexState = activeBoard.session.state
 
 
   const mockUser = {
@@ -449,22 +451,342 @@
     activeBoard.requestChanges([{type: 'set-props', props : newProps }])
   }
 
+  // function refreshDocumentByDocData() {
+  //   // const irender = new IRenderManagerService
+  //   // const x = irender.getRenderAll()
+  //   // console.log(x)
+    
+  //   const docModel = currentUniverEditable
+  //   const docViewModel = new DocumentViewModel(docModel);
+  //   const localeService = new LocaleService();
+  //   const documentSkeleton = DocumentSkeleton.create(docViewModel, localeService)
+  //   documentSkeleton.getViewModel().getDataModel().updateDocumentDataPageSize(1000, 1 / 0), documentSkeleton.calculate();
+  // }
 
+  // function refreshDocument() {
+  //   const docModel = currentUniverEditable
+  //   const docViewModel = new DocumentViewModel(docModel);
+  //   docViewModel.reset(docModel);
+  //   const localeService = new LocaleService();
+  //   const documentSkeleton = DocumentSkeleton.create(docViewModel, localeService)
+  //   documentSkeleton.calculate();
+  // }
+
+  function hackRefresh(cursorPosition?: number) {
+    const unitId = currentUniverEditable.getUnitId()
+
+    let underlineCommand = {
+    "id": "doc.mutation.rich-text-editing",
+    "type": 2,
+    "params": {
+        "unitId": unitId,
+        "actions": [
+            "body",
+            {
+                "et": "text-x",
+                "e": [
+                    {
+                        "t": "r",
+                        "body": {
+                            "dataStream": "",
+                            "textRuns": [
+                                {
+                                    "st": 0,
+                                    "ed": 0,
+                                    "ts": {
+                                        "bl": 1
+                                    }
+                                }
+                            ]
+                        },
+                        "len": 0,
+                        "segmentId": "",
+                        "oldBody": {
+                            "dataStream": "",
+                            "textRuns": [
+                                {
+                                    "st": 0,
+                                    "ed": 0,
+                                    "ts": {
+                                        "it": 1,
+                                        "ul": {
+                                            "s": 1
+                                        },
+                                        "bl": 1
+                                    }
+                                }
+                            ],
+                            "customDecorations": [],
+                            "customRanges": []
+                        }
+                    }
+                ]
+            }
+        ],
+        "textRanges": [
+            {
+                "startOffset": cursorPosition ? cursorPosition : lastCursorPosition.startOffset,
+                "endOffset": cursorPosition ? cursorPosition : lastCursorPosition.endOffset,
+                "collapsed": true,
+                "rangeType": "TEXT",
+                "endNodePosition": null,
+                "direction": "none",
+                "segmentId": "",
+                "segmentPage": -1,
+                "isActive": true
+            }
+        ],
+        "trigger": "doc.command.set-inline-format"
+      }
+    }
+    univerAPI.executeCommand(underlineCommand.id, underlineCommand.params, {"fromCollab": true})
+
+    let setSelectionsCommand = {
+        "id": "doc.operation.set-selections",
+        "type": 1,
+        "params": {
+            "unitId": unitId,
+            "subUnitId": "Hhqy2C",
+            "segmentId": "",
+            "style": {
+                "strokeWidth": 1.5,
+                "stroke": "rgba(0, 0, 0, 0)",
+                "strokeActive": "rgba(0, 0, 0, 1)",
+                "fill": "rgba(0, 65, 198, 0.8)"
+            },
+            "isEditing": true,
+            "ranges": [
+                {
+                    "startOffset": cursorPosition ? cursorPosition : lastCursorPosition.startOffset,
+                    "endOffset": cursorPosition ? cursorPosition : lastCursorPosition.endOffset,
+                    "collapsed": true,
+                    "rangeType": "TEXT",
+                    "direction": "none",
+                    "segmentId": "",
+                    "segmentPage": -1,
+                    "isActive": true
+                }
+            ]
+        }
+      }
+
+    univerAPI.executeCommand(setSelectionsCommand.id, setSelectionsCommand.params, {"fromCollab": true})
+
+  }
+
+  function extractActionsFromCommands(commands) {
+    let actions = []
+    commands.forEach(command => {
+      if (command.params?.actions) {
+        command.params.actions[1]["e"][0] ? actions.push(command.params.actions[1]["e"][0]) : null
+        command.params.actions[1]["e"][1] ? actions.push(command.params.actions[1]["e"][1]): null
+
+        // actions.push(removeSymbolFields(command.params.actions))
+      }
+    })
+    return actions
+  }
 
   const updateDocument = async () => {
+    // currentUniverEditable.reset($synState.spreadsheet)
+    // hackRefresh()
+    // return null
+
+    // ========== ADD COMMENT COMMANDS ==========
     let newCommentCommands = $synState.commentCommands.filter(comment => !appliedCommandIds.includes(comment.uniqueId))
     newCommentCommands.forEach(comment => {
-      // execute comment
       univerAPI.executeCommand(comment.id, comment.params, {"fromCollab": true})
       appliedCommandIds.push(comment.uniqueId)
     })
+    // ========== END ADD COMMENT COMMANDS ==========
 
-    let newCommands = $synState.commands.filter(command => !appliedCommandIds.includes(command.uniqueId))
+    // check if all my applied commands are present in synState.commands
+    let synStateCommandIds = $synState.commands.map(command => command.uniqueId)
+    if (!appliedCommandIds.every(id => synStateCommandIds.includes(id))) {
+      return
+    }
+
+    // ========== DEFINE NEW COMMANDS ==========
+    let lastAppliedCommandId = appliedCommandIds[appliedCommandIds.length - 1]
+    let lastAppliedCommandIndex = $synState.commands.findIndex(command => command.uniqueId == lastAppliedCommandId)
+    let newCommandsAfterLastApplied = $synState.commands.slice(lastAppliedCommandIndex + 1).filter(command => !appliedCommandIds.includes(command.uniqueId))
+    
+    // create an array of commands for each set of consecutive commands not applied
+    let allCommandsBeforeLastApplied = $synState.commands.slice(0, lastAppliedCommandIndex + 1)
+    let newCommandsBeforeLastAppliedChunked = []
+    let currentChunk = []
+    allCommandsBeforeLastApplied.forEach((command, index) => {
+      if (!appliedCommandIds.includes(command.uniqueId)) {
+        currentChunk.push(command)        
+      } else if (currentChunk.length > 0) {
+        newCommandsBeforeLastAppliedChunked.push(currentChunk)
+        currentChunk = []
+      }
+    })
+    if (currentChunk.length > 0) {
+      newCommandsBeforeLastAppliedChunked.push(currentChunk)
+    }
+    console.log("new commands before", newCommandsBeforeLastAppliedChunked)
+
+    // create an array of commands for each set of consecutive post-current commands not applied
+    let allCommandsAfterLastApplied = $synState.commands.slice(lastAppliedCommandIndex + 1)
+    let newCommandsAfterLastAppliedChunked = []
+    currentChunk = []
+    allCommandsAfterLastApplied.forEach((command, index) => {
+      if (currentChunk.length > 0) {
+        if (command.previousCommandUniqueId == currentChunk[currentChunk.length - 1].uniqueId) {
+          currentChunk.push(command)
+        } else {
+          newCommandsAfterLastAppliedChunked.push(currentChunk)
+          currentChunk = [command]
+        }
+      } else {
+        currentChunk.push(command)
+      }
+    })
+    if (currentChunk.length > 0) {
+      newCommandsAfterLastAppliedChunked.push(currentChunk)
+    }
+    console.log("new commands after", newCommandsAfterLastAppliedChunked)
+
+    // let newCommandsBeforeLastApplied = $synState.commands.slice(0, lastAppliedCommandIndex + 1).filter(command => !appliedCommandIds.includes(command.uniqueId))
+    // let newCommands = $synState.commands.filter(command => !appliedCommandIds.includes(command.uniqueId))
+
+
     // console.log("new commands", newCommands)
     // console.log("new commands", newCommands, "of", $synState.commands, "because", appliedCommandIds)
     // console.log("sheet is", currentUniverEditable.snapshot.body.dataStream, $synState.spreadsheet.body.dataStream)
     
-    if (newCommands.length > 0) {
+    // let oldCommands = $synState.commands.filter(command => appliedCommandIds.includes(command.uniqueId))
+
+    // console.log("NEW COMMANDS", newCommands)
+    // console.log("OLD COMMANDS", oldCommands)
+
+    console.log("ALL COMMANDS", $synState.commands)
+    console.log("ALL COMMANDS SIMPLIFIED", $synState.commands.map(command => command.params.actions[1].e[1]?.body?.dataStream))
+    // console.log("NEW COMMANDS BEFORE", newCommandsBeforeLastApplied)
+    console.log("NEW ACTIONS AFTER", extractActionsFromCommands(newCommandsAfterLastApplied))
+    // console.log("OLD ACTIONS", extractActionsFromCommands(oldCommands))
+    // let transforms = extractActionsFromCommands(newCommandsBeforeLastApplied)
+
+    // try {
+    //   // transforms = JSONX.transform(extractActionsFromCommands(newCommands), extractActionsFromCommands(oldCommands), "left")
+    //   transforms = TextX.transform(extractActionsFromCommands(newCommandsBeforeLastApplied), extractActionsFromCommands(oldCommands), "left")
+    //   // let transforms2 = TextX.transform(extractActionsFromCommands(newCommandsAfterLastApplied), extractActionsFromCommands(newCommandsBeforeLastApplied))
+    //   // transforms = transforms.concat(transforms2)
+    // } catch (e) {
+    //   console.log("error transforming", e)
+    // }
+
+    let transforms = []
+
+    newCommandsBeforeLastAppliedChunked.forEach(commandChunk => {
+      let finalCommandId = commandChunk[commandChunk.length - 1].uniqueId
+      let appliedCommandsAfterChunk = $synState.commands.slice($synState.commands
+                                                        .findIndex(command => command.uniqueId == finalCommandId) + 1)
+                                                        .filter(command => appliedCommandIds.includes(command.uniqueId))
+      try {
+        console.log("applied commands after chunk", appliedCommandsAfterChunk)
+        console.log("command chunk", commandChunk)
+        transforms = TextX.transform(extractActionsFromCommands(commandChunk), extractActionsFromCommands(appliedCommandsAfterChunk), "left")
+        let reverseTransforms = TextX.transform(extractActionsFromCommands(appliedCommandsAfterChunk), extractActionsFromCommands(commandChunk), "right")
+        console.log("reverse transforms", reverseTransforms)
+      } catch (e) {
+        console.log("error transforming", e)
+      }
+    })
+
+    // transforms = transforms.concat(extractActionsFromCommands(newCommandsAfterLastApplied))
+
+    newCommandsAfterLastAppliedChunked.forEach(commandChunk => {
+      console.log("command chunk",
+      commandChunk.map(command => command.params.actions[1].e[0]?.len),
+      commandChunk.map(command => command.params.actions[1].e[1]?.body?.dataStream),
+       commandChunk)
+      let prevKnownCommand = commandChunk[0].previousCommandUniqueId
+      console.log("prev known command", prevKnownCommand)
+      let prevknownCommandIndex = $synState.commands.findIndex(command => command.uniqueId == prevKnownCommand)
+      console.log("prev known command index", prevknownCommandIndex)
+      let commandChunkIndex = $synState.commands.findIndex(command => command.uniqueId == commandChunk[0].uniqueId)
+      console.log("command chunk index", commandChunkIndex)
+      let inBetweenCommandsSet = $synState.commands.slice(prevknownCommandIndex + 1, commandChunkIndex)
+      console.log("in-between commands", 
+      inBetweenCommandsSet.map(command => command.params.actions[1].e[0]?.len),
+      inBetweenCommandsSet.map(command => command.params.actions[1].e[1]?.body?.dataStream),
+      inBetweenCommandsSet)
+
+      // commandChunk.forEach(command => {
+      //   let transformsToAdd = TextX.transform(extractActionsFromCommands([command]), extractActionsFromCommands(inBetweenCommandsSet))
+      //   transforms = transforms.concat(transformsToAdd)
+      // })
+      
+      transforms = transforms.concat(TextX.transform(extractActionsFromCommands(commandChunk), extractActionsFromCommands(inBetweenCommandsSet), "right"))
+    })
+
+    console.log("TRANSFORMS", transforms)
+
+    // let applicableDocument = univerAPI.getActiveDocument()
+    // console.log("APPLICABLE DOCUMENT", applicableDocument.getSnapshot())
+
+    for (let i = 0; i < transforms.length; i+=2) {
+      let dataStream = currentUniverEditable.getSnapshot().body.dataStream;
+      let lastIndex = dataStream.lastIndexOf("\r");
+      let docLength = (lastIndex !== -1) ? dataStream.substring(0, lastIndex).length : dataStream.length;
+      console.log("doc length", docLength)
+      console.log('retain position', transforms[i].len)
+      // if (transforms[i].len > docLength) {
+      //   transforms[i].len = docLength
+      // }
+
+      TextX.apply(currentUniverEditable.getSnapshot().body
+      , [transforms[i], transforms[i+1]])
+
+      let calculateCursorPosition = TextX.transformPosition([transforms[i], transforms[i+1]], lastCursorPosition.startOffset)
+      console.log("calculateCursorPosition", calculateCursorPosition)
+      hackRefresh(calculateCursorPosition)
+    }
+    // TextX.apply(currentUniverEditable.getSnapshot().body
+    // , transforms)
+
+    // let jsonxinstance = JSONX.getInstance()
+    // let jsonxactions = jsonxinstance.editOp(transforms)
+    // console.log("jsonxactions", jsonxactions)
+    // currentUniverEditable.apply(jsonxactions)
+    // currentUniverEditable.apply([ "body", { "et": "text-x", "e": [ { "body": { "dataStream": "a" }, "len": 1, "line": 0, "segmentId": "", "t": "i" } ] } ])
+
+    // console.log("board true state", $synComplexState)
+    // currentUniverEditable.reset($synState.spreadsheet)
+
+    // hackRefresh()
+    // refreshDocument()
+    // refreshDocumentByDocData()
+    // let r = new RichText()
+    // r.refreshDocumentByDocData()
+
+    console.log("new state", JSON.stringify(currentUniverEditable.getSnapshot().body.dataStream))
+
+    // let applied = TextX.apply(currentUniverEditable.getSnapshot().body
+    // , transforms)
+
+    // jsonX.editOp(textX.serialize())
+
+    // applicableDocument.refreshDocumentByDocData()
+
+    // univerAPI
+
+    // TextX.transformPosition(transforms, lastCursorPosition.startOffset)
+
+    // console.log("APPLIED", applied)
+    
+    // currentUniverEditable.apply(transforms)
+    
+    // appliedCommandIds.push(...newCommands.map(command => command.uniqueId))
+    // appliedCommandIds.push(...newCommandsBeforeLastApplied.map(command => command.uniqueId))
+    appliedCommandIds.unshift(...newCommandsBeforeLastAppliedChunked.flat().map(command => command.uniqueId))
+    appliedCommandIds.push(...newCommandsAfterLastAppliedChunked.flat().map(command => command.uniqueId))
+    
+
+    if (false && newCommands.length > 0) {
       // console.log("all commands that are new", newCommands.map(command => command.uniqueId))
       newCommands.forEach(command => {
         // if ( !["thread-comment-ui.operation.set-active-comment", "doc.operation.set-selections", "doc.command.insert-text", "doc.operation.set-selections"].includes(command.id)) {
@@ -611,20 +933,20 @@
     // TODO: check more than just datastream
     // console.log("=======)", JSON.stringify(currentUniverEditable.snapshot.body), "=======", JSON.stringify($synState.spreadsheet.body))
     
-    if (JSON.stringify(currentUniverEditable.snapshot.body.dataStream) != JSON.stringify($synState.spreadsheet.body.dataStream)) {
-      // currentUniverEditable.snapshot = $synState.spreadsheet
-    // if (currentUniverEditable.snapshot != $synState.spreadsheet) {
-      // console.log("-------------------------------- FULL RESET --------------------------------")
-      // console.log("!", JSON.stringify(currentUniverEditable.snapshot.body.dataStream), JSON.stringify($synState.spreadsheet.body.dataStream))
-      resetStrikes += 1
-      if (resetStrikes > 1) {
-        dispatch("reset")
-      }
-      // use .reset
-      // currentUniverEditable.reset($synState.spreadsheet)
-    } else {
-      resetStrikes = 0
-    }
+    // if (JSON.stringify(currentUniverEditable.snapshot.body.dataStream) != JSON.stringify($synState.spreadsheet.body.dataStream)) {
+    //   // currentUniverEditable.snapshot = $synState.spreadsheet
+    // // if (currentUniverEditable.snapshot != $synState.spreadsheet) {
+    //   // console.log("-------------------------------- FULL RESET --------------------------------")
+    //   // console.log("!", JSON.stringify(currentUniverEditable.snapshot.body.dataStream), JSON.stringify($synState.spreadsheet.body.dataStream))
+    //   resetStrikes += 1
+    //   if (resetStrikes > 1) {
+    //     dispatch("reset")
+    //   }
+    //   // use .reset
+    //   // currentUniverEditable.reset($synState.spreadsheet)
+    // } else {
+    //   resetStrikes = 0
+    // }
 
 
       // console.log("---last beg----", lastCursorCommand)
@@ -649,6 +971,18 @@
   const debouncedApplyCommandBatch = debounce(async() => {
     // console.log("applying batch", commands)
     // console.log("===", currentUniverEditable.save())
+    // let modifiedToCommit = []
+    // let previousCommitUniqueId = appliedCommandIds[appliedCommandIds.length - 1] ? appliedCommandIds[appliedCommandIds.length - 1] : "" //$synState.commands[$synState.commands.length - 1]?.uniqueId ? $synState.commands[$synState.commands.length - 1].uniqueId : "0"
+    // toCommit.forEach(command => {
+    //   let newCommand = {
+    //     ...command,
+    //     previousCommandUniqueId: previousCommitUniqueId
+    //   }
+    //   console.log("new command", newCommand)
+    //   modifiedToCommit.push(newCommand)
+    //   previousCommitUniqueId = newCommand.uniqueId
+    // })
+
     activeBoard.requestChanges([{type: 'execute-command-batch', commands: toCommit, documentValue: changeUndefinedToEmptyString(removeSymbolFields(currentUniverEditable.getSnapshot()))}])
     toCommit = []
     // activeBoard.requestChanges([{type: 'set-spreadsheet', spreadsheet: changeUndefinedToEmptyString(removeSymbolFields($synState.spreadsheet))}])
@@ -730,7 +1064,7 @@
 
     univerAPI.onBeforeCommandExecute((command, options) => {
       // univerAPI.onCommandExecuted((command, options) => {
-      // console.log("++++++++++++ command", command, "options", options
+      console.log("++++++++++++ command", command, "options", options)
 
       if (!options?.fromCollab) {
         // command.params?.trigger != "univer.command.undo")
@@ -744,7 +1078,9 @@
           console.log("command", command, "options", options)
           const uniqueId = uuidv1()
           const authorId = mockUser.userID
-          let commandWithId = {...removeSymbolFields(command), uniqueId: uniqueId, authorId: authorId}
+          let previousCommandUniqueId = lastKnownCommand ? lastKnownCommand : appliedCommandIds[appliedCommandIds.length - 1]
+          lastKnownCommand = uniqueId
+          let commandWithId = {...removeSymbolFields(command), uniqueId: uniqueId, authorId: authorId, previousCommandUniqueId: previousCommandUniqueId}
           // console.log("command with id", commandWithId)
           appliedCommandIds.push(uniqueId)
 

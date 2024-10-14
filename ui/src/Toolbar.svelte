@@ -29,7 +29,7 @@
   <div class="items"><Search></Search></div>
   <div class="items">
     <Folk></Folk>
-    <a href="https://github.com/holochain-apps/calcy/issues" title="Report a problem in our GitHub repo" target="_blank">
+    <a href="https://github.com/lightningrodlabs/calcy/issues" title="Report a problem in our GitHub repo" target="_blank">
       <div class="nav-button"><SvgIcon color="#fff" icon="faBug" size=20px /></div>
     </a>
   </div>
