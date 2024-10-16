@@ -38,14 +38,15 @@
   import SheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US';
   import UIEnUS from '@univerjs/ui/locale/en-US';
 
-  import { LocaleType, LogLevel, LocaleService, Univer, UniverInstanceType, type JSONXActions, TextXActionType, TextX, JSONX, ICommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
+  import { LocaleType, LogLevel, ILogService, LocaleService, Univer, UniverInstanceType, type JSONXActions, TextXActionType, TextX, JSONX, ICommandService, CommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
   import { defaultTheme } from '@univerjs/design';
-  import { UniverDocsPlugin, DocSkeletonManagerService } from '@univerjs/docs';
+  import { UniverDocsPlugin, DocSkeletonManagerService, DocSelectionManagerService } from '@univerjs/docs';
   import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
   import { UniverRenderEnginePlugin } from '@univerjs/engine-render';
   import { UniverSheetsPlugin } from '@univerjs/sheets';
   import { UniverSheetsUIPlugin } from '@univerjs/sheets-ui';
   import { UniverUIPlugin } from '@univerjs/ui';
+  import { IRangeSelectorService, RangeSelector, TextEditor, IEditorService } from '@univerjs/docs-ui';
   import { UniverSheetsConditionalFormattingUIPlugin } from '@univerjs/sheets-conditional-formatting-ui';
   import { UniverSheetsThreadCommentPlugin } from '@univerjs/sheets-thread-comment';
   // import { UniverDebuggerPlugin } from '@univerjs/debugger';
@@ -68,6 +69,7 @@
   import { UniverSlidesPlugin } from '@univerjs/slides';
   import { UniverSlidesUIPlugin } from '@univerjs/slides-ui';
   import { FUniver } from "@univerjs/facade";
+    import { text } from "svelte/internal";
     // import { act } from "react";
 
   export let activeBoard: Board
@@ -87,7 +89,8 @@
   let appliedCommandIds = [];
   let lastKnownCommand
   let lastCursorPosition = null;
-  let funiver;
+  let allSelections = {}
+  // let funiver;
   let resetStrikes = 0;
 
   let univer = new Univer({
@@ -155,16 +158,24 @@
 
   const { getStore } :any = getContext("store");
   let store: CalcyStore = getStore();
-  const univerAPI = FUniver.newAPI(univer);
+
+  const injector = univer.__getInjector();
+  const iLogService = injector.get(ILogService)
+  const userManagerService = injector.get(UserManagerService);
+  const univerAPI = injector.get(ICommandService);
+  // const univerAPI = new CommandService(injector, iLogService)
+  // const univerAPI = injector.createInstance(FUniver);
+  // const univerAPI = FUniver.newAPI(injector);
+  console.log(injector, iLogService, univerAPI)
   
   // let previousState = {};
-  $: uiProps = store.uiProps
+  // $: uiProps = store.uiProps
   // $: participants = activeBoard.participants()
-  $: activeHashB64 = store.boardList.activeBoardHashB64;
+  // $: activeHashB64 = store.boardList.activeBoardHashB64;
   $: synState = activeBoard.readableState()
-  $: synComplexState = activeBoard.session.state
+  // $: synComplexState = activeBoard.session.state
   $: clerkStatus = activeBoard.session ? activeBoard.session.clerkStatus: null
-  $: chronicle = activeBoard.session ? activeBoard.session.chronicle: null
+  // $: chronicle = activeBoard.session ? activeBoard.session.chronicle: null
 
   let chronicleEstimation = []
   let chronicleEstimationLength = 0
@@ -214,9 +225,6 @@
     //   })
     // }
   }
-
-  const injector = univer.__getInjector();
-  const userManagerService = injector.get(UserManagerService);
   
   univer.registerPlugin(UniverThreadCommentPlugin);
   univer.registerPlugin(UniverDocsThreadCommentUIPlugin);
@@ -285,26 +293,26 @@
       }
     }, 0);
 
-  function newCursorPosition (externalCommand, lastCursorPosition) {
-    // console.log("last internal command", lastCursorPosition)
-    // console.log("external command", externalCommand)
-    let lastLocalStartPosition = lastCursorPosition?.startOffset ? lastCursorPosition.startOffset : 0
-    try {
-      let externalLength = externalCommand.params?.actions[1]?.e[1]?.len
-      let externalStartPosition = externalCommand.params?.actions[1]?.e[0]?.len
-      let externalTrueStartPosition = externalStartPosition// - externalLength
-      // console.log("external true start position", externalTrueStartPosition)
-      // console.log("local start position", lastLocalStartPosition)
-      if (externalTrueStartPosition < lastLocalStartPosition) {
-        return [lastLocalStartPosition + externalLength, lastLocalStartPosition + externalLength]
-      } else {
-        return [lastLocalStartPosition, lastLocalStartPosition]
-      }
-    } catch (e) {
-      // console.log("last local start position", lastLocalStartPosition)
-      return [lastLocalStartPosition, lastLocalStartPosition]
-    }
-  }
+  // function newCursorPosition (externalCommand, lastCursorPosition) {
+  //   // console.log("last internal command", lastCursorPosition)
+  //   // console.log("external command", externalCommand)
+  //   let lastLocalStartPosition = lastCursorPosition?.startOffset ? lastCursorPosition.startOffset : 0
+  //   try {
+  //     let externalLength = externalCommand.params?.actions[1]?.e[1]?.len
+  //     let externalStartPosition = externalCommand.params?.actions[1]?.e[0]?.len
+  //     let externalTrueStartPosition = externalStartPosition// - externalLength
+  //     // console.log("external true start position", externalTrueStartPosition)
+  //     // console.log("local start position", lastLocalStartPosition)
+  //     if (externalTrueStartPosition < lastLocalStartPosition) {
+  //       return [lastLocalStartPosition + externalLength, lastLocalStartPosition + externalLength]
+  //     } else {
+  //       return [lastLocalStartPosition, lastLocalStartPosition]
+  //     }
+  //   } catch (e) {
+  //     // console.log("last local start position", lastLocalStartPosition)
+  //     return [lastLocalStartPosition, lastLocalStartPosition]
+  //   }
+  // }
 
   const updateSheet = async () => {
     // await delay(100)
@@ -395,25 +403,6 @@
     };
   }
 
-  // HANDLE INCOMING EXECUTING COMMANDS
-  // $: if ($synState && univerAPI) {
-  //   // debouncedMaybeSave();
-  //   debouncedUpdate();
-  //   // updateDocument();
-  // }
-
-  const saveDocument = async () => {
-    const docSnapshot = changeUndefinedToEmptyString(removeSymbolFields(currentUniverEditable.snapshot))
-    console.log("Doc data", docSnapshot)
-
-    let changes: BoardDelta[] = [{
-      type: "set-spreadsheet",
-      spreadsheet: docSnapshot
-    }]
-    activeBoard.requestChanges(changes)
-    // previousState = {...cloneDeep($synState)}
-  }
-
   const saveSheet = async () => {
     const sheetData = currentUniverEditable.save();
     const sheetData2 = univerAPI.getActiveWorkbook().getSnapshot();
@@ -477,143 +466,165 @@
   //   documentSkeleton.calculate();
   // }
 
-  function hackRefresh(selection) {
+  async function hackRefresh(selection) {
     console.log("hack refresh selection", selection)
     const unitId = currentUniverEditable.getUnitId()
 
-    let underlineCommand = {
-      "id": "doc.mutation.rich-text-editing",
-      "type": 2,
-      "params": {
-          "unitId": unitId,
-          "actions": [
-              "body",
-              {
-                  "et": "text-x",
-                  "e": [
-                      {
-                          "t": "r",
-                          "body": {
-                              "dataStream": "",
-                              "textRuns": [
-                                  {
-                                      "st": 0,
-                                      "ed": 0,
-                                      "ts": {
-                                          "cl": {
-                                              "rgb": "#1e222b"
-                                          }
-                                      }
-                                  }
-                              ]
-                          },
-                          "len": 0,
-                          "segmentId": "",
-                          "oldBody": {
-                              "dataStream": "",
-                              "textRuns": [
-                                  {
-                                      "st": 0,
-                                      "ed": 0,
-                                      "ts": {
-                                          "bl": 1,
-                                          "cl": {
-                                              "rgb": "#1e222b"
-                                          }
-                                      }
-                                  }
-                              ],
-                              "customDecorations": [],
-                              "customRanges": []
-                          }
-                      }
-                  ]
-              }
-          ],
-          "textRanges": [
-              {
-                  "startOffset": selection ? selection.startOffset : 0,
-                  "endOffset": selection ? selection.endOffset : 0,
-                  "collapsed": true,
-                  "rangeType": "TEXT",
-                  "startNodePosition": {
-                      "glyph": 0,
-                      "divide": 0,
-                      "line": 0,
-                      "column": 0,
-                      "section": 0,
-                      "page": 0,
-                      "pageType": 0,
-                      "segmentPage": -1,
-                      "isBack": true,
-                      "path": [
-                          "pages",
-                          0
-                      ]
-                  },
-                  "endNodePosition": {
-                      "glyph": 0,
-                      "divide": 0,
-                      "line": 0,
-                      "column": 0,
-                      "section": 0,
-                      "page": 0,
-                      "pageType": 0,
-                      "segmentPage": -1,
-                      "isBack": true,
-                      "path": [
-                          "pages",
-                          0
-                      ]
-                  },
-                  "direction": "none",
-                  "segmentId": "",
-                  "segmentPage": -1,
-                  "isActive": true
-              }
-          ],
-          "trigger": "doc.command.set-inline-format"
-      }
+    let emptySpaceCommand = {
+        "id": "doc.mutation.rich-text-editing",
+        "type": 2,
+        "params": {
+            "unitId": unitId,
+            "actions": [
+                "body",
+                {
+                    "et": "text-x",
+                    "e": [
+                        {
+                            "t": "r",
+                            "len": 0,
+                            "segmentId": ""
+                        },
+                        {
+                            "t": "i",
+                            "body": {
+                                "dataStream": ""
+                            },
+                            "len": 0,
+                            "line": 0,
+                            "segmentId": ""
+                        }
+                    ]
+                }
+            ],
+            "debounce": true,
+            "trigger": "doc.command.insert-text"
+        }
     }
-    univerAPI.executeCommand(underlineCommand.id, underlineCommand.params, {"fromCollab": true})
 
-    // let cursor = new MemoryCursor(0)
+    let clickCommand = {
+        "id": "doc.operation.set-selections",
+        "type": 1,
+        "params": {
+            "unitId": unitId,
+            "subUnitId": unitId,
+            "segmentId": "",
+            "style": {
+                "strokeWidth": 1.5,
+                "stroke": "rgba(0, 0, 0, 0)",
+                "strokeActive": "rgba(0, 0, 0, 1)",
+                "fill": "rgba(130, 192, 9, 1)"
+            },
+            "isEditing": false,
+            "ranges": [
+                {
+                    "startOffset": selection ? selection.startOffset : 0,
+                    "endOffset": selection ? selection.endOffset : 0,
+                    "collapsed": true,
+                    "rangeType": "TEXT",
+                    "startNodePosition": {
+                        "glyph": 24,
+                        "divide": 0,
+                        "line": 0,
+                        "column": 0,
+                        "section": 0,
+                        "page": 0,
+                        "segmentPage": -1,
+                        "pageType": 0,
+                        "path": [
+                            "pages",
+                            0
+                        ],
+                        "isBack": true
+                    },
+                    "endNodePosition": null,
+                    "direction": "none",
+                    "segmentId": "",
+                    "segmentPage": -1,
+                    "isActive": true
+                }
+            ]
+        }
+    }
+
+    await univerAPI.executeCommand(emptySpaceCommand.id, emptySpaceCommand.params, {"fromCollab": true})
+    // univerAPI.executeCommand(clickCommand.id, clickCommand.params, {"fromCollab": true})
+
+    // let cursor = new MemoryCursor()
+    // cursor.reset()
     // cursor.moveCursor(3)
     // console.log("cursor", cursor)
+    allSelections[mockUser.userID] = selection
+    setCursors()
 
-    let setSelectionsCommand = {
-      "id": "doc.operation.set-selections",
-      "type": 1,
-      "params": {
-          "unitId": unitId,
-          "subUnitId": "Hhqy2C",
-          "segmentId": "",
-          "style": {
-              "strokeWidth": 1.5,
-              "stroke": "rgba(0, 0, 0, 0)",
-              "strokeActive": "rgba(0, 0, 0, 1)",
-              "fill": "rgba(0, 65, 198, 0.8)"
-          },
-          "isEditing": true,
-          "ranges": [
-              {
-                  // "startOffset": 0,
-                  "startOffset": selection ? selection.startOffset : 0,
-                  // "endOffset": 0,
-                  "endOffset": selection ? selection.endOffset : 0,
-                  "collapsed": true,
-                  "rangeType": "TEXT",
-                  "direction": "none",
-                  "segmentId": "",
-                  "segmentPage": -1,
-                  "isActive": true
-              }
-          ]
+  }
+
+  function setCursors() {
+    const unitId = currentUniverEditable.getUnitId()
+    const textSelectionService = injector.get(DocSelectionManagerService);
+    const docRanges = textSelectionService.getDocRanges()
+    const currentSelection = textSelectionService.getActiveTextRange()
+    let selections = []
+
+    // selections.push(
+    //   {
+    //     collapsed: true,
+    //     direction: "none",
+    //     isActive: false,
+    //     startOffset: 0,
+    //     endOffset: 0,
+    //   }
+    // )
+
+    // for each in allSelections
+    Object.keys(allSelections).forEach(author => {
+      if (author === mockUser.userID) {
+        return
       }
-    }
+      let selection = allSelections[author]
+      selections.push({
+        collapsed: false,
+        direction: "none",
+        isActive: false,
+        startOffset: selection.startOffset,
+        endOffset: selection.endOffset,
+      })
+    })
 
-    // console.log("selection", selection)
-    univerAPI.executeCommand(setSelectionsCommand.id, setSelectionsCommand.params, {"fromCollab": true})
+    let mySelection = allSelections[mockUser.userID]
+
+    selections.push({
+      collapsed: true,
+      direction: "none",
+      isActive: true,
+      startOffset: mySelection ? mySelection.startOffset : 0,
+      endOffset: mySelection ? mySelection.endOffset : 0,
+    })
+
+    // console.log("textSelectionService", docRanges)
+    // let selectionInfo = textSelectionService.getSelectionInfo()
+    // console.log("selectionInfo", docRanges, currentSelection, selections)
+
+    // replaceDocRanges(
+    //     docRanges: ISuccinctDocRangeParam[],
+    //     params: Nullable<IDocSelectionManagerSearchParam> = this._currentSelection,
+    //     isEditing = true,
+    //     options?: { [key: string]: boolean }
+    // ) {
+
+    textSelectionService.replaceDocRanges(
+      selections,
+      {
+        unitId: unitId,
+        subUnitId: unitId,
+      },
+      true,
+      {}
+    )
+    
+    // univerAPI.executeCommand(emptySpaceCommand.id, emptySpaceCommand.params, {"fromCollab": true})
+
+    // textSelectionService.refreshSelection()
   }
 
 
@@ -630,379 +641,6 @@
     return actions
   }
 
-  const updateDocument = async () => {
-    // currentUniverEditable.reset($synState.spreadsheet)
-    // hackRefresh()
-    // return null
-
-    // ========== ADD COMMENT COMMANDS ==========
-    let newCommentCommands = $synState.commentCommands.filter(comment => !appliedCommandIds.includes(comment.uniqueId))
-    newCommentCommands.forEach(comment => {
-      univerAPI.executeCommand(comment.id, comment.params, {"fromCollab": true})
-      appliedCommandIds.push(comment.uniqueId)
-    })
-    // ========== END ADD COMMENT COMMANDS ==========
-
-    // check if all my applied commands are present in synState.commands
-    let synStateCommandIds = $synState.commands.map(command => command.uniqueId)
-    if (!appliedCommandIds.every(id => synStateCommandIds.includes(id))) {
-      return
-    }
-
-    // ========== DEFINE NEW COMMANDS ==========
-    let lastAppliedCommandId = appliedCommandIds[appliedCommandIds.length - 1]
-    let lastAppliedCommandIndex = $synState.commands.findIndex(command => command.uniqueId == lastAppliedCommandId)
-    let newCommandsAfterLastApplied = $synState.commands.slice(lastAppliedCommandIndex + 1).filter(command => !appliedCommandIds.includes(command.uniqueId))
-    
-    // create an array of commands for each set of consecutive commands not applied
-    let allCommandsBeforeLastApplied = $synState.commands.slice(0, lastAppliedCommandIndex + 1)
-    let newCommandsBeforeLastAppliedChunked = []
-    let currentChunk = []
-    allCommandsBeforeLastApplied.forEach((command, index) => {
-      if (!appliedCommandIds.includes(command.uniqueId)) {
-        currentChunk.push(command)        
-      } else if (currentChunk.length > 0) {
-        newCommandsBeforeLastAppliedChunked.push(currentChunk)
-        currentChunk = []
-      }
-    })
-    if (currentChunk.length > 0) {
-      newCommandsBeforeLastAppliedChunked.push(currentChunk)
-    }
-    console.log("new commands before", newCommandsBeforeLastAppliedChunked)
-
-    // create an array of commands for each set of consecutive post-current commands not applied
-    let allCommandsAfterLastApplied = $synState.commands.slice(lastAppliedCommandIndex + 1)
-    let newCommandsAfterLastAppliedChunked = []
-    currentChunk = []
-    allCommandsAfterLastApplied.forEach((command, index) => {
-      if (currentChunk.length > 0) {
-        if (command.previousCommandUniqueId == currentChunk[currentChunk.length - 1].uniqueId) {
-          currentChunk.push(command)
-        } else {
-          newCommandsAfterLastAppliedChunked.push(currentChunk)
-          currentChunk = [command]
-        }
-      } else {
-        currentChunk.push(command)
-      }
-    })
-    if (currentChunk.length > 0) {
-      newCommandsAfterLastAppliedChunked.push(currentChunk)
-    }
-    console.log("new commands after", newCommandsAfterLastAppliedChunked)
-
-    // let newCommandsBeforeLastApplied = $synState.commands.slice(0, lastAppliedCommandIndex + 1).filter(command => !appliedCommandIds.includes(command.uniqueId))
-    // let newCommands = $synState.commands.filter(command => !appliedCommandIds.includes(command.uniqueId))
-
-
-    // console.log("new commands", newCommands)
-    // console.log("new commands", newCommands, "of", $synState.commands, "because", appliedCommandIds)
-    // console.log("sheet is", currentUniverEditable.snapshot.body.dataStream, $synState.spreadsheet.body.dataStream)
-    
-    // let oldCommands = $synState.commands.filter(command => appliedCommandIds.includes(command.uniqueId))
-
-    // console.log("NEW COMMANDS", newCommands)
-    // console.log("OLD COMMANDS", oldCommands)
-
-    console.log("ALL COMMANDS", $synState.commands)
-    console.log("ALL COMMANDS SIMPLIFIED", $synState.commands.map(command => command.params.actions[1].e[1]?.body?.dataStream))
-    // console.log("NEW COMMANDS BEFORE", newCommandsBeforeLastApplied)
-    console.log("NEW ACTIONS AFTER", extractActionsFromCommands(newCommandsAfterLastApplied))
-    // console.log("OLD ACTIONS", extractActionsFromCommands(oldCommands))
-    // let transforms = extractActionsFromCommands(newCommandsBeforeLastApplied)
-
-    // try {
-    //   // transforms = JSONX.transform(extractActionsFromCommands(newCommands), extractActionsFromCommands(oldCommands), "left")
-    //   transforms = TextX.transform(extractActionsFromCommands(newCommandsBeforeLastApplied), extractActionsFromCommands(oldCommands), "left")
-    //   // let transforms2 = TextX.transform(extractActionsFromCommands(newCommandsAfterLastApplied), extractActionsFromCommands(newCommandsBeforeLastApplied))
-    //   // transforms = transforms.concat(transforms2)
-    // } catch (e) {
-    //   console.log("error transforming", e)
-    // }
-
-    let transforms = []
-
-    newCommandsBeforeLastAppliedChunked.forEach(commandChunk => {
-      let finalCommandId = commandChunk[commandChunk.length - 1].uniqueId
-      let appliedCommandsAfterChunk = $synState.commands.slice($synState.commands
-                                                        .findIndex(command => command.uniqueId == finalCommandId) + 1)
-                                                        .filter(command => appliedCommandIds.includes(command.uniqueId))
-      try {
-        console.log("applied commands after chunk", appliedCommandsAfterChunk)
-        console.log("command chunk", commandChunk)
-        transforms = TextX.transform(extractActionsFromCommands(commandChunk), extractActionsFromCommands(appliedCommandsAfterChunk), "left")
-        let reverseTransforms = TextX.transform(extractActionsFromCommands(appliedCommandsAfterChunk), extractActionsFromCommands(commandChunk), "right")
-        console.log("reverse transforms", reverseTransforms)
-      } catch (e) {
-        console.log("error transforming", e)
-      }
-    })
-
-    // transforms = transforms.concat(extractActionsFromCommands(newCommandsAfterLastApplied))
-
-    newCommandsAfterLastAppliedChunked.forEach(commandChunk => {
-      console.log("command chunk",
-      commandChunk.map(command => command.params.actions[1].e[0]?.len),
-      commandChunk.map(command => command.params.actions[1].e[1]?.body?.dataStream),
-       commandChunk)
-      let prevKnownCommand = commandChunk[0].previousCommandUniqueId
-      console.log("prev known command", prevKnownCommand)
-      let prevknownCommandIndex = $synState.commands.findIndex(command => command.uniqueId == prevKnownCommand)
-      console.log("prev known command index", prevknownCommandIndex)
-      let commandChunkIndex = $synState.commands.findIndex(command => command.uniqueId == commandChunk[0].uniqueId)
-      console.log("command chunk index", commandChunkIndex)
-      let inBetweenCommandsSet = $synState.commands.slice(prevknownCommandIndex + 1, commandChunkIndex)
-      console.log("in-between commands", 
-      inBetweenCommandsSet.map(command => command.params.actions[1].e[0]?.len),
-      inBetweenCommandsSet.map(command => command.params.actions[1].e[1]?.body?.dataStream),
-      inBetweenCommandsSet)
-
-      // commandChunk.forEach(command => {
-      //   let transformsToAdd = TextX.transform(extractActionsFromCommands([command]), extractActionsFromCommands(inBetweenCommandsSet))
-      //   transforms = transforms.concat(transformsToAdd)
-      // })
-      
-      transforms = transforms.concat(TextX.transform(extractActionsFromCommands(commandChunk), extractActionsFromCommands(inBetweenCommandsSet), "right"))
-    })
-
-    console.log("TRANSFORMS", transforms)
-
-    // let applicableDocument = univerAPI.getActiveDocument()
-    // console.log("APPLICABLE DOCUMENT", applicableDocument.getSnapshot())
-
-    for (let i = 0; i < transforms.length; i+=2) {
-      let dataStream = currentUniverEditable.getSnapshot().body.dataStream;
-      let lastIndex = dataStream.lastIndexOf("\r");
-      let docLength = (lastIndex !== -1) ? dataStream.substring(0, lastIndex).length : dataStream.length;
-      console.log("doc length", docLength)
-      console.log('retain position', transforms[i].len)
-      // if (transforms[i].len > docLength) {
-      //   transforms[i].len = docLength
-      // }
-
-      TextX.apply(currentUniverEditable.getSnapshot().body
-      , [transforms[i], transforms[i+1]])
-
-      let calculateCursorPosition = TextX.transformPosition([transforms[i], transforms[i+1]], lastCursorPosition.startOffset)
-      console.log("calculateCursorPosition", calculateCursorPosition)
-      hackRefresh(calculateCursorPosition)
-    }
-    // TextX.apply(currentUniverEditable.getSnapshot().body
-    // , transforms)
-
-    // let jsonxinstance = JSONX.getInstance()
-    // let jsonxactions = jsonxinstance.editOp(transforms)
-    // console.log("jsonxactions", jsonxactions)
-    // currentUniverEditable.apply(jsonxactions)
-    // currentUniverEditable.apply([ "body", { "et": "text-x", "e": [ { "body": { "dataStream": "a" }, "len": 1, "line": 0, "segmentId": "", "t": "i" } ] } ])
-
-    // console.log("board true state", $synComplexState)
-    // currentUniverEditable.reset($synState.spreadsheet)
-
-    // hackRefresh()
-    // refreshDocument()
-    // refreshDocumentByDocData()
-    // let r = new RichText()
-    // r.refreshDocumentByDocData()
-
-    console.log("new state", JSON.stringify(currentUniverEditable.getSnapshot().body.dataStream))
-
-    // let applied = TextX.apply(currentUniverEditable.getSnapshot().body
-    // , transforms)
-
-    // jsonX.editOp(textX.serialize())
-
-    // applicableDocument.refreshDocumentByDocData()
-
-    // univerAPI
-
-    // TextX.transformPosition(transforms, lastCursorPosition.startOffset)
-
-    // console.log("APPLIED", applied)
-    
-    // currentUniverEditable.apply(transforms)
-    
-    // appliedCommandIds.push(...newCommands.map(command => command.uniqueId))
-    // appliedCommandIds.push(...newCommandsBeforeLastApplied.map(command => command.uniqueId))
-    appliedCommandIds.unshift(...newCommandsBeforeLastAppliedChunked.flat().map(command => command.uniqueId))
-    appliedCommandIds.push(...newCommandsAfterLastAppliedChunked.flat().map(command => command.uniqueId))
-    
-
-    if (false && newCommands.length > 0) {
-      // console.log("all commands that are new", newCommands.map(command => command.uniqueId))
-      newCommands.forEach(command => {
-        // if ( !["thread-comment-ui.operation.set-active-comment", "doc.operation.set-selections", "doc.command.insert-text", "doc.operation.set-selections"].includes(command.id)) {
-        // if ( !["thread-comment-ui.operation.set-active-comment", "doc.operation.set-selections"].includes(command.id)) {
-          // if command is not in the list of commands that have been applied
-          if (appliedCommandIds.includes(command.uniqueId)) {
-            // console.log("command already applied", command.uniqueId)
-          } else {
-          // console.log("executing command", command.params?.body?.dataStream)
-            // console.log("command not yet applied, executing command", command)
-            appliedCommandIds.push(command.uniqueId)
-            // if more than 40 commands, rese
-            if (appliedCommandIds.length > 80) {
-              const itemsToRemove = appliedCommandIds.length - 80;
-              appliedCommandIds.splice(0, itemsToRemove);
-            }
-
-            // console.log("univer doc", currentUniverEditable)
-            // console.log("last position", lastCursorPosition)
-            // command.params.textRanges[0].endOffset = 0
-            // command.params.textRanges[0].startOffset = 0
-            
-            try {
-              // // if authorID is someone else, calculate cursor end position
-              // if (command.authorId != mockUser.userID) {
-                // console.log("999", command.authorId, mockUser.userID)
-                // console.log("set cursor to", lastCursorPosition, "from", command.params.textRanges, command)
-                let [start, end] = newCursorPosition(command, lastCursorPosition)
-                // console.log("new cursor position", start, end)
-                if (!start || !end) {
-                  // console.log("no start or end")
-                  start = 0
-                  end = 0
-                }
-                try {
-                  if (command.params.ranges != undefined) {
-                    command.params.ranges[0] = {...lastCursorPosition, startOffset: start, endOffset: end}
-                    lastCursorPosition = command.params.textRanges[0]
-                  } else if (command.params.textRanges != undefined) {
-                    command.params.textRanges[0] = {...lastCursorPosition, startOffset: start, endOffset: end}
-                    lastCursorPosition = command.params.textRanges[0]
-                  }
-                } catch (e) {
-                  console.log("error setting ranges", e)
-                }
-              // } else {
-              //   // console.log("", command.authorId, mockUser.userID)
-              // }
-            } catch (e) {
-              console.log("error setting cursor", e)
-            }
-
-            try {
-              // console.log("position changes", positionChanges)
-              positionChanges.forEach(change => {
-                let currentCommandPositionChange: PositionChange;
-                if (command.params.actions[1].e[1]?.len) {
-                  currentCommandPositionChange = {addOrRemove: command.params.actions[1].e[1].len,
-                    fromPosition: command.params.actions[1].e[0].len}
-                } else {
-                  currentCommandPositionChange = {addOrRemove: command.params.actions[1].e[0].len,
-                    fromPosition: 0}
-                }
-                
-                // console.log("(range)", change.fromPosition, currentCommandPositionChange.fromPosition)
-                
-                // if change is before current command, change insert position
-                if (change.fromPosition < currentCommandPositionChange.fromPosition) {
-                  // console.log("changing insert position", currentCommandPositionChange.fromPosition, change.addOrRemove)
-                  command.params.actions[1].e[0].len = currentCommandPositionChange.fromPosition + change.addOrRemove
-                  
-                  // console.log("****0****")
-                  // if (command.params.ranges != undefined) {
-                  //   console.log("****1****")
-                  //   command.params.ranges[0] = {...lastCursorPosition, startOffset: currentCommandPositionChange.fromPosition + change.addOrRemove, endOffset: currentCommandPositionChange.fromPosition + change.addOrRemove}
-                  // } else if (command.params.textRanges != undefined) {
-                  //   console.log("****2****")
-                  //   command.params.textRanges[0] = {...lastCursorPosition, startOffset: currentCommandPositionChange.fromPosition - change.addOrRemove, endOffset: currentCommandPositionChange.fromPosition - change.addOrRemove}
-                  // }
-                  // lastCursorPosition = command.params.textRanges[0]
-
-                }
-
-              })
-            } catch (e) {
-              console.log("error changing insert position", e)
-            }
-
-            try {
-              // console.log("++++ executing command", command)
-              univerAPI.executeCommand(command.id, command.params, {"fromCollab": true})
-
-              let setCursorCommand = {
-                  "id": "doc.operation.set-selections",
-                  "type": 1,
-                  "params": {
-                      "unitId": "lGaPeL",
-                      "subUnitId": "",
-                      "segmentId": "",
-                      "style": {
-                          "strokeWidth": 1.5,
-                          "stroke": "rgba(0, 0, 0, 0)",
-                          "strokeActive": "rgba(0, 0, 0, 1)",
-                          "fill": "rgba(0, 65, 198, 0.8)"
-                      },
-                      "isEditing": false,
-                      "ranges": [
-                          {
-                            "startOffset": lastCursorPosition.startOffset,
-                            "endOffset": lastCursorPosition.endOffset,
-                            "collapsed": true,
-                            "isActive": true
-                          }
-                      ]
-                  }
-              }
-              univerAPI.executeCommand(setCursorCommand.id, setCursorCommand.params, {"fromCollab": true})
-
-              // let commandService = new ICommandService(currentUniverEditable);
-              // console.log("99999")
-              // commandService.executeCommand(command.id, command.params, {"fromCollab": true})
-              // JSONX.invertWithDoc(removeSymbolFields(command.params?.actions[1]), currentUniverEditable.getSnapshot());
-              // let docId = univerAPI.getActiveDocument().getId();
-              // console.log("docId", docId)
-              // const renderManagerService = currentUniverEditable.get(IRenderManagerService);
-              // const documentViewModel = renderManagerService.getRenderById(docId)?.with(DocSkeletonManagerService).getViewModel();
-
-
-            } catch (e) {
-              console.log("error executing command", e)
-            }
-            // let actions: JSONXActions = command.params.actions
-            // currentUniverEditable.apply(actions)
-          }
-        // } else {
-        //   appliedCommandIds.push(command.uniqueId)
-        // }
-      })
-
-      // RESET POSITION CHANGES
-      positionChanges = []
-
-    // if sheet is not the same between local and incoming, update local
-    // TODO: check more than just datastream
-    // console.log("=======)", JSON.stringify(currentUniverEditable.snapshot.body), "=======", JSON.stringify($synState.spreadsheet.body))
-    
-    // if (JSON.stringify(currentUniverEditable.snapshot.body.dataStream) != JSON.stringify($synState.spreadsheet.body.dataStream)) {
-    //   // currentUniverEditable.snapshot = $synState.spreadsheet
-    // // if (currentUniverEditable.snapshot != $synState.spreadsheet) {
-    //   // console.log("-------------------------------- FULL RESET --------------------------------")
-    //   // console.log("!", JSON.stringify(currentUniverEditable.snapshot.body.dataStream), JSON.stringify($synState.spreadsheet.body.dataStream))
-    //   resetStrikes += 1
-    //   if (resetStrikes > 1) {
-    //     dispatch("reset")
-    //   }
-    //   // use .reset
-    //   // currentUniverEditable.reset($synState.spreadsheet)
-    // } else {
-    //   resetStrikes = 0
-    // }
-
-
-      // console.log("---last beg----", lastCursorCommand)
-      // univerAPI.executeCommand(lastCursorCommand.id, lastCursorCommand.params, {"fromCollab": true})
-      // console.log("---last end----", lastCursorCommand)
-      // console.log(lastCursorCommand.params.ranges[0].endOffset)
-      // const memoryCursor = new MemoryCursor();
-      // memoryCursor.reset();
-      // memoryCursor.moveCursorTo(lastCursorCommand.params.ranges[0].endOffset);
-      // previousState = {...cloneDeep($synState)}
-    }
-  }
-
   let toCommit: any[] = []
 
   type PositionChange  = {
@@ -1012,43 +650,62 @@
   let positionChanges: PositionChange[] = []
 
   const debouncedApplyCommandBatch = debounce(async() => {
-    let lastKnownCommandIndex = chronicleEstimationLength - 1 //chronicleEstimation.length ? chronicleEstimation.length - 1 : -1;
-    let lastKnownCommandId = chronicleEstimation[lastKnownCommandIndex]?.uniqueId;
-    let uniqueId = uuidv1()
-    let authorId = activeBoard.session.myPubKey;
 
-    let modifiedCommands = toCommit.map(command => {
-      return {
-        ...command,
-        uniqueId,
-        authorId,
-        lastKnownCommandIndex,
-        lastKnownCommandId
-      }
-    })
+    // ================CURSOR POSITION==================
+    const textSelectionService = injector.get(DocSelectionManagerService);
+    const docRanges = textSelectionService.getDocRanges()
+    let currentSelection1 = textSelectionService.getActiveTextRange()
+    let cursorPosition = currentSelection1.startOffset
+    console.log("cursor position", cursorPosition)
+    // let cursorPosition = TextX.transformPosition()
+    // ================CURSOR POSITION ENDS==================
     
-    const preOps = await activeBoard.session.sendOperationsToClerk(modifiedCommands, chronicleEstimationLength - 1);
+    console.log("sending to clerk", toCommit, chronicleEstimationLength - 1)
+    const preOps = await activeBoard.session.sendOperationsToClerk(toCommit, chronicleEstimationLength - 1);
     console.log("clerksNewOperations", preOps)
+
+    if (preOps.length === 0) {
+      chronicleEstimation = chronicleEstimation.concat(toCommit)
+      chronicleEstimationLength += toCommit.length
+      chronicleEstimation = [...chronicleEstimation];
+      toCommit = []
+      return;
+    }
     
     let commandSelection = {
-      startOffset: modifiedCommands[modifiedCommands.length - 1].params.textRanges[0].startOffset,
-      endOffset: modifiedCommands[modifiedCommands.length - 1].params.textRanges[0].endOffset
+      startOffset: toCommit[toCommit.length - 1]?.params?.textRanges[0]?.startOffset,
+      endOffset: toCommit[toCommit.length - 1]?.params?.textRanges[0]?.endOffset
     }
 
-    let localTransforms = extractActionsFromCommands(modifiedCommands)
+    let localTransforms = extractActionsFromCommands(toCommit)
     let localTransformsReverse = TextX.invert(localTransforms)
     TextX.apply(currentUniverEditable.getSnapshot().body, localTransformsReverse)
-    commandSelection = {
-      startOffset: TextX.transformPosition(localTransformsReverse, commandSelection.startOffset),
-      endOffset: TextX.transformPosition(localTransformsReverse, commandSelection.endOffset)
-    }
+    cursorPosition = TextX.transformPosition(localTransformsReverse, cursorPosition)
+    console.log("applied", localTransformsReverse.length, "cursorposition", cursorPosition)
+    // commandSelection = {
+    //   startOffset: TextX.transformPosition(localTransformsReverse, commandSelection.startOffset),
+    //   endOffset: TextX.transformPosition(localTransformsReverse, commandSelection.endOffset)
+    // }
     console.log("command selection 2", commandSelection)
 
     for (let i = 0; i < preOps.length; i++) {
       let c = preOps[i]
-      let cDocIndex = c.params.textRanges[0].startOffset
+      let opAuthor = c.authorId
+      let cStart = c.params?.textRanges[0]?.startOffset
+      let cEnd = c.params?.textRanges[0]?.startOffset
+      if (cStart && cEnd) {
+        allSelections[opAuthor] = {
+          startOffset: cStart,
+          endOffset: cEnd
+        }
+      }
+
       let operations = extractActionsFromCommands([c])
-      let unknownCommands = chronicleEstimation.slice(c.lastKnownCommandIndex + 1)
+      let lastKnownCommandIndex = chronicleEstimation.findIndex(command => command.uniqueId === c.lastKnownCommandId)
+      if (lastKnownCommandIndex === -1) {
+        lastKnownCommandIndex = toCommit.findIndex(command => command.uniqueId === c.lastKnownCommandId)
+      }
+      let unknownCommands = chronicleEstimation.slice(lastKnownCommandIndex + 1)
       // .filter(op => {
       //   let opDocIndex = op.params.textRanges[0].startOffset
       //   return opDocIndex <= cDocIndex
@@ -1056,25 +713,29 @@
       let unknownOps = extractActionsFromCommands(unknownCommands)
       let transforms = operations
       unknownOps.forEach(op => {
+        console.log(transforms)
         let opDocIndex = op.len
-        let transformsDocIndex = transforms[0].len
-        if (opDocIndex < transformsDocIndex) {
+        if (transforms[0] && opDocIndex < transforms[0].len) {
           transforms = TextX.transform(transforms, [op], "left")
         }
       })
+      // transforms = TextX.transform(transforms, unknownOps, "left")
       
       let applyTransforms = transforms
       TextX.apply(currentUniverEditable.getSnapshot().body
       , applyTransforms)
+      cursorPosition = TextX.transformPosition(applyTransforms, cursorPosition)
+      console.log("applied", applyTransforms.length, "cursorposition", cursorPosition)
       
       // adjust local transforms according to transformed preOps
       transforms.forEach(op => {
         let opDocIndex = op.len
-        let localTransformsDocIndex = localTransforms[0].len
+        let localTransformsDocIndex = localTransforms[0]?.len
         if (opDocIndex < localTransformsDocIndex) {
           localTransforms = TextX.transform(localTransforms, [op], "left")
         }
       })
+      // localTransforms = TextX.transform(localTransforms, transforms)
 
       chronicleEstimation.push({
         ...c,
@@ -1084,38 +745,41 @@
     }
 
     TextX.apply(currentUniverEditable.getSnapshot().body, localTransforms)
-    lastSelection = {
-      startOffset: TextX.transformPosition(localTransforms, commandSelection.startOffset),
-      endOffset: TextX.transformPosition(localTransforms, commandSelection.endOffset)
-    }
+    cursorPosition = TextX.transformPosition(localTransforms, cursorPosition)
+    console.log("applied", localTransforms.length, "cursorposition", cursorPosition)
+    // lastSelection = {
+    //   startOffset: TextX.transformPosition(localTransforms, commandSelection.startOffset),
+    //   endOffset: TextX.transformPosition(localTransforms, commandSelection.endOffset)
+    // }
 
-    chronicleEstimation = chronicleEstimation.concat(modifiedCommands)
-    chronicleEstimationLength += 1
+    chronicleEstimation = chronicleEstimation.concat(toCommit)
+    chronicleEstimationLength += toCommit.length
     chronicleEstimation = [...chronicleEstimation];
-    console.log("chronicleEstimation", chronicleEstimation)
+    // console.log("chronicleEstimation", chronicleEstimation)
     
-    console.log("last selection", lastSelection, "command selection", commandSelection, "localTransforms", localTransforms)
+    // console.log("last selection", lastSelection, "command selection", commandSelection, "localTransforms", localTransforms)
 
     // get index of last local transform
-    let finalLocalTransformOp = localTransforms[localTransforms.length - 1]
-    let semiFinalLocalTransformOp = localTransforms[localTransforms.length - 2]
-    console.log("final local transforms", finalLocalTransformOp, semiFinalLocalTransformOp)
-    let finalDocIndex = 0;
-    if (finalLocalTransformOp && semiFinalLocalTransformOp && finalLocalTransformOp.len && semiFinalLocalTransformOp.len) {
-      finalDocIndex = finalLocalTransformOp.len + semiFinalLocalTransformOp.len
-    } else if (finalLocalTransformOp && finalLocalTransformOp.len) {
-      finalDocIndex = finalLocalTransformOp.len
-    } else if (semiFinalLocalTransformOp && semiFinalLocalTransformOp.len) {
-      finalDocIndex = semiFinalLocalTransformOp.len
-    }
+    // let finalLocalTransformOp = localTransforms[localTransforms.length - 1]
+    // let semiFinalLocalTransformOp = localTransforms[localTransforms.length - 2]
+
+    // console.log("final local transforms", finalLocalTransformOp, semiFinalLocalTransformOp, localTransforms)
+    // let finalDocIndex = 0;
+    // if (finalLocalTransformOp && semiFinalLocalTransformOp && finalLocalTransformOp.len && semiFinalLocalTransformOp.len) {
+    //   finalDocIndex = finalLocalTransformOp.len + semiFinalLocalTransformOp.len
+    // } else if (finalLocalTransformOp && finalLocalTransformOp.len) {
+    //   finalDocIndex = finalLocalTransformOp.len
+    // } else if (semiFinalLocalTransformOp && semiFinalLocalTransformOp.len) {
+    //   finalDocIndex = semiFinalLocalTransformOp.len
+    // }
 
     hackRefresh({
-      startOffset: finalDocIndex,
-      endOffset: finalDocIndex
+      startOffset: cursorPosition,
+      endOffset: cursorPosition
     })
     
     toCommit = []
-  }, 0);
+  }, 20);
   // }, 1000);
 
   // Update logic wrapped in a debounced function
@@ -1191,9 +855,14 @@
       univerAPI.executeCommand(comment.id, comment.params, {"fromCollab": true})
     })
 
-    univerAPI.onBeforeCommandExecute((command, options) => {
-      // univerAPI.onCommandExecuted((command, options) => {
-      console.log("++++++++++++ command", command, "options", options)
+    setInterval(async() => {
+      if ($clerkStatus == "found") {
+        debouncedApplyCommandBatch()
+      }
+    }, 5000)
+
+    univerAPI.onCommandExecuted((command, options) => {      
+      // console.log("++++++++++++ command", command, "options", options)
 
       if (!options?.fromCollab) {
         if (command.id.includes("comment") && command.id.includes("mutation")) {
@@ -1201,37 +870,61 @@
         }
         else if (command.id.includes("mutation")) {
           const uniqueId = uuidv1()
-          const authorId = mockUser.userID
           let previousCommandUniqueId = lastKnownCommand ? lastKnownCommand : appliedCommandIds[appliedCommandIds.length - 1]
           lastKnownCommand = uniqueId
-          let commandWithId = {...removeSymbolFields(command), uniqueId: uniqueId, authorId: authorId, previousCommandUniqueId: previousCommandUniqueId}
+          // let lastKnownCommandIndex = chronicleEstimationLength - 1 //chronicleEstimation.length ? chronicleEstimation.length - 1 : -1;
+          // let lastKnownCommandId = chronicleEstimation[lastKnownCommandIndex]?.uniqueId;
+          // let lastKnownCommandIndex = chronicleEstimation.length - 1 + toCommit.length
+          let lastKnownCommandId = toCommit.length > 0 ? toCommit[toCommit.length - 1].uniqueId : chronicleEstimation[chronicleEstimation.length - 1]?.uniqueId;
+          let authorId = activeBoard.session.myPubKey;
+          let commandWithId = {
+            ...removeSymbolFields(command),
+            uniqueId: uniqueId,
+            authorId: authorId,
+            previousCommandUniqueId: previousCommandUniqueId,
+            // lastKnownCommandIndex,
+            lastKnownCommandId
+          }
           appliedCommandIds.push(uniqueId)
 
-          let newPositionChange;
-          if (command.params?.actions && command.params?.actions[1]?.e[1]?.len) {
-            newPositionChange = {addOrRemove: command.params.actions[1].e[1].len,
-              fromPosition: command.params.actions[1].e[0].len}
-          } else {
-            let c = command.params?.actions ? command.params.actions[1].e[0].len : 0
-            newPositionChange = {addOrRemove: c,
-              fromPosition: 0}
-          }
+          // let newPositionChange;
+          // if (command.params?.actions && command.params?.actions[1]?.e[1]?.len) {
+          //   newPositionChange = {addOrRemove: command.params.actions[1].e[1].len,
+          //     fromPosition: command.params.actions[1].e[0].len}
+          // } else {
+          //   let c = command.params?.actions ? command.params.actions[1].e[0].len : 0
+          //   newPositionChange = {addOrRemove: c,
+          //     fromPosition: 0}
+          // }
           
-          // change to negative if delete
-          if (command.id.includes("delete")) {
-            newPositionChange.addOrRemove = -newPositionChange.addOrRemove
-          }
+          // // change to negative if delete
+          // if (command.id.includes("delete")) {
+          //   newPositionChange.addOrRemove = -newPositionChange.addOrRemove
+          // }
 
-          positionChanges.push(newPositionChange)
+          // positionChanges.push(newPositionChange)
 
           if (commandWithId.params) {
             toCommit.push(changeUndefinedToEmptyString(removeSymbolFields(commandWithId)))
           }
-          debouncedApplyCommandBatch()
+
+          // ========CURSORS========
+          let mySelectionStart = command.params?.textRanges[0]?.startOffset
+          let mySelectionEnd = command.params?.textRanges[0]?.endOffset
+          if (mySelectionStart && mySelectionEnd) {
+            allSelections[mockUser.userID] = {
+              startOffset: mySelectionStart,
+              endOffset: mySelectionEnd
+            }
+          }
+          setTimeout(() => {
+            setCursors()
+          }, 10)
+          // debouncedApplyCommandBatch()
         }
-        if (command.id === "doc.operation.set-selections") {
-          lastCursorPosition = command.params.ranges[0]
-        }
+        // if (command.id === "doc.operation.set-selections") {
+        //   lastCursorPosition = command.params.ranges[0]
+        // }
       }
     })
 
@@ -1323,6 +1016,7 @@
           <div style="display:flex; flex-direction: row">
 
             {JSON.stringify($clerkStatus)}
+            {JSON.stringify(chronicleEstimation.length)}
             <br>
             
             <Avatar agentPubKey={store.myAgentPubKey} showNickname={false} size={30} />

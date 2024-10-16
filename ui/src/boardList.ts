@@ -264,15 +264,14 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         //     footer: false,
         // });
         // univer.registerPlugin(UniverDocsPlugin);
-        univer.registerPlugin(UniverDocsUIPlugin, {
-            container: 'univerdoc',
-            layout: {
-                docContainerConfig: {
-                    innerLeft: false,
-                },
-            },
-        });
-
+        // univer.registerPlugin(UniverDocsUIPlugin, {
+        //     container: 'univerdoc',
+        //     layout: {
+        //         docContainerConfig: {
+        //             innerLeft: false,
+        //         },
+        //     },
+        // });
 
         // core plugins
         univer.registerPlugin(UniverUIPlugin, {
@@ -291,7 +290,6 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         univer.registerPlugin(UniverSheetsPlugin);
         univer.registerPlugin(UniverSheetsUIPlugin);
         univer.registerPlugin(UniverSheetsFormulaPlugin);
-
         univer.registerPlugin(UniverSlidesPlugin);
         univer.registerPlugin(UniverSlidesUIPlugin);
 
@@ -301,13 +299,14 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         // let newSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {});
 
         // univer.registerPlugin(UniverDocsDrawingUIPlugin);
-
         if (options.type == "spreadsheet") {
             const newSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {});
             options.spreadsheet = newSheet.save()
         } else if (options.type == "document") {
+            console.log(4)
             let newDoc = univer.createUnit(UniverInstanceType.UNIVER_DOC, {});
             if (!options.spreadsheet) {
+                console.log(5)
                 options.spreadsheet = newDoc.snapshot
             }
         } else {
@@ -317,16 +316,7 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
             }
             console.log("new presentation", newPres)
         }
-
-        console.log("1314")
-
-
-        console.log("1516")
-
-        console.log("options", options)
         const board = await Board.Create(this.synStore, options)
-
-        console.log("1718")
         return board
     }
 }
