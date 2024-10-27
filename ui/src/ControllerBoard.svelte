@@ -1,5 +1,6 @@
 <script lang="ts">
     import CalcyPane from './CalcyPane.svelte'
+    import CalcySpreadsheetPane from './CalcySpreadsheetPane.svelte';
     import { CalcyStore } from './store'
     import { setContext } from 'svelte';
     import type { AppClient, EntryHash } from '@holochain/client';
@@ -24,6 +25,7 @@
     let synStore: OTSynStore = store.synStore
     store.boardList.setActiveBoard(board)
     $: activeBoardHash = store.boardList.activeBoardHash
+    $: boardData = $activeBoardHash ? store.boardList.boardData2.get($activeBoardHash) : null
     $: activeBoard = store.boardList.activeBoard
     $: participants = $activeBoard ? $activeBoard.sessionParticipants() : undefined
     $: profiles = $participants ? profilesStore.allProfiles : undefined
@@ -66,16 +68,18 @@
 
       <div class="wrapper">
 
-      <div class="workspace" style="display:flex">
-
+      <div class="workspace" style="display:flex">        
         {#if show && $participants?.status == "complete"}
           {#if $profile?.status == "complete"}
             {#if $profiles?.status == "complete"}
               {#if $activeBoardHash !== undefined && profiles}
-                {#if resetVar}
-                  <CalcyPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/>
+                {#if resetVar && $boardData.status == "complete"}
+                  {#if $boardData.value.latestState.type === "spreadsheet"}
+                    <CalcySpreadsheetPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value} tabView={true}/>
+                  {:else if $boardData.value.latestState.type === "document"}
+                    <CalcyPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value} tabView={true}/>
+                  {/if}                
                 {/if}
-                <!-- <CalcyPane activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/> -->
               {/if}
             {/if}
           {/if}

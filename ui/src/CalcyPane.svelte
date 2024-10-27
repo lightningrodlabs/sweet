@@ -75,9 +75,10 @@
   import { FUniver } from "@univerjs/facade";
   import { text } from "svelte/internal";
   import { SynClient, stateFromCommitOT, type Commit, type SessionMessage } from "@holochain-syn/core";
-    import { FreezeObject, from } from "automerge";
+    // import { FreezeObject, from } from "automerge";
     // import { act } from "react";
 
+  export let tabView = false
   export let activeBoard: Board
   export let myProfile;
   export let profiles;
@@ -758,7 +759,8 @@
     }
   }
 
-  async function getDocumentState(fromCommitHash?): Promise<[FreezeObject<any>, Uint8Array]> {
+  // async function getDocumentState(fromCommitHash?): Promise<[FreezeObject<any>, Uint8Array]> {
+  async function getDocumentState(fromCommitHash?): Promise<[any, Uint8Array]> {
     let wfc: Uint8Array = fromCommitHash;
     console.log(!wfc, wfc)
     if (!wfc) {
@@ -870,9 +872,13 @@
 
   async function waitToFindClerk() {
     let foundClerk = false
+    let maxTime = setTimeout(() => {
+      foundClerk = true
+    }, 5000)
     while (!foundClerk) {
       if ($clerkStatus == "found") {
         foundClerk = true
+        clearTimeout(maxTime)
       }
       await delay(100)
     }
@@ -905,8 +911,8 @@
       // If above process fails, try again
       const waitClerkProcess = await waitToFindClerk()
       processes.push(waitClerkProcess)
-      const initialCommits = await activeBoard.session.sendOperationsToClerk([], 0);
-      const wfc: Uint8Array = initialCommits[0] ? decodeHashFromBase64(initialCommits[0].workingFromCommit) as Uint8Array : null
+      const initialCommits = await activeBoard.session.sendOperationsToClerk([], 0).catch((e) => {console.log(e)})
+      const wfc: Uint8Array = (initialCommits && initialCommits[0]) ? decodeHashFromBase64(initialCommits[0].workingFromCommit) as Uint8Array : null
       console.log("found working wfc from session 2", wfc, initialCommits[0])
       const [fullDocument, latestHash] = await getDocumentState(wfc)
       workingFromCommit = latestHash as Uint8Array
@@ -1166,7 +1172,7 @@
   })
   
   const copyWalToPocket = () => {
-    const attachment: WAL = { hrl: [store.dnaHash, activeBoard.hash], context: "" }
+    const attachment: WAL = { hrl: [store.dnaHash, activeBoard.hash], context: JSON.stringify({docType: 'document'}) }
     store.weClient?.walToPocket(attachment)
   }
 
@@ -1179,9 +1185,13 @@
       {#if standAlone}
         <h2>{$synState.name}</h2>
         {:else}
-        <button  class="board-button close" on:click={closeBoard} title="Close">
-          <SvgIcon icon=faClose size="16px"/>
-        </button>
+
+        {#if !tabView}
+          <button  class="board-button close" on:click={closeBoard} title="Close">
+            <SvgIcon icon=faClose size="16px"/>
+          </button>
+        {/if}
+
         <input
           type="text"
           value={$synState.name}
@@ -1317,7 +1327,7 @@
     </div>
   {/if}
   <div
-    id="univer-container" style="height:100%; position: relative;">---</div>
+    id="univer-container" style="height:100vh; position: relative;">---</div>
   {/if}
 </div>
 <style>

@@ -31,14 +31,18 @@ const SHEET_ICON_SRC = `data:image/svg+xml;utf8,
 </g>
 </svg>`
 
-const textDocumentIcon = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--!Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zM256 0V128H384L256 0zM112 256H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16z"/></svg>`
-
+const textDocumentIcon = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--!Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zM256 0V128H384L256 0zM112 256H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16z" fill="%234A559D"/></svg>`
+const spreadsheetIcon = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M32 32C14.3 32 0 46.3 0 64v384c0 17.7 14.3 32 32 32h320c17.7 0 32-14.3 32-32V64c0-17.7-14.3-32-32-32H32zm32 64h64v64H64V96zm0 96h64v64H64v-64zm0 96h64v64H64v-64zm96-192h128v64H160V96zm0 96h128v64H160v-64zm0 96h128v64H160v-64zm0 96h128v64H160v-64z" fill="%238e31ebe6"/></svg>`
 
 export const appletServices: AppletServices = {
     // Types of attachment that this Applet offers for other Applets to be created
     creatables: {
       'spreadsheet': {
         label: "Spreadsheet",
+        icon_src: spreadsheetIcon,
+      },
+      'document': {
+        label: "Document",
         icon_src: textDocumentIcon,
       }
     },
@@ -51,10 +55,10 @@ export const appletServices: AppletServices = {
         view: "applet-view",
       },      
     },
-    bindAsset: async (appletClient: AppClient,
-      srcWal: WAL, dstWal: WAL): Promise<void> => {
-      console.log("Bind requested.  Src:", srcWal, "  Dst:", dstWal)
-    },
+    // bindAsset: async (appletClient: AppClient,
+    //   srcWal: WAL, dstWal: WAL): Promise<void> => {
+    //   console.log("Bind requested.  Src:", srcWal, "  Dst:", dstWal)
+    // },
     getAssetInfo: async (
       appletClient: AppClient,
       wal: WAL,
@@ -70,10 +74,11 @@ export const appletServices: AppletServices = {
         const workspaces = await toPromise(docStore.allWorkspaces)
         const workspace = new OTWorkspaceStore(docStore, Array.from(workspaces.keys())[0])
         const latestState = await toPromise(workspace.latestState)
-
+        const docType = JSON.parse(wal.context).docType
+        console.log("ATTACHMENT INFO", recordInfo, docType)
 
         return {
-          icon_src: textDocumentIcon,
+          icon_src: docType == "document" ? textDocumentIcon : spreadsheetIcon,
           name: latestState.name,
         };
       } else {

@@ -194,6 +194,7 @@
     let store: CalcyStore = getStore();
     // const univerAPI = FUniver.newAPI(univer);
   
+    export let tabView = false;
     export let activeBoard: Board
     export let standAlone = false
     
@@ -324,7 +325,7 @@
       });
     
     const copyWalToPocket = () => {
-      const attachment: WAL = { hrl: [store.dnaHash, activeBoard.hash], context: "" }
+      const attachment: WAL = { hrl: [store.dnaHash, activeBoard.hash], context: JSON.stringify({docType: 'spreadsheet'}) }
       store.weClient?.walToPocket(attachment)
     }
   
@@ -337,9 +338,13 @@
           {#if standAlone}
             <h2>{$synState.name}</h2>
             {:else}
-            <button  class="board-button close" on:click={closeBoard} title="Close">
-              <SvgIcon icon=faClose size="16px"/>
-            </button>
+
+            {#if !tabView}
+              <button  class="board-button close" on:click={closeBoard} title="Close">
+                <SvgIcon icon=faClose size="16px"/>
+              </button>
+            {/if}
+
             <input
               type="text"
               value={$synState.name}
@@ -420,7 +425,7 @@
     {#if $synState}
     <!-- <button on:click={saveSheet}>Save</button> -->
     <!-- <div id="spreadsheet" style="height:100%; position: relative; top: -32px;"> -->
-     <div id="univer-container" style="height:100%; position: relative;" on:click={maybeSave}>
+     <div id="univer-container" style="height:100vh; position: relative;" on:click={maybeSave}>
         <!-- <ReactAdapter
           el={Workbook}
           data={[{ name: "Sheet1", rows:20}]} 

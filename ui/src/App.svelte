@@ -179,7 +179,7 @@
       <ControllerCreate  view={createView} client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerCreate>
     {:else if renderType== RenderType.App}
       <Controller  client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></Controller>
-    {:else if  renderType== RenderType.WAL && !wal.context}
+    {:else if  renderType== RenderType.WAL}
       <ControllerBoard  board={wal.hrl[1]} client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerBoard>
     {:else if  renderType== RenderType.BlockActiveBoards}
       <ControllerBlockActiveBoards client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerBlockActiveBoards>

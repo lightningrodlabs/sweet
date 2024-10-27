@@ -92,7 +92,6 @@
               {#if $activeBoardHash !== undefined && profiles}
                 {#if $boardData.status == "complete"}
                 {#if resetVar}
-                    {@const readableBoard = $activeBoard.readableState()}
                     {#if $boardData.value.latestState.type === "spreadsheet"}
                       <CalcySpreadsheetPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/>
                     {:else if $boardData.value.latestState.type === "document"}
