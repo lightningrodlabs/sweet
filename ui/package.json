@@ -77,7 +77,9 @@
     "@univerjs/thread-comment": "^0.4.0",
     "@univerjs/thread-comment-ui": "^0.4.0",
     "@univerjs/ui": "^0.4.0",
-    "@univerjs/uniscript": "^0.4.0"
+    "@univerjs/uniscript": "^0.4.0",
+    "@univerjs-pro/exchange-client": "0.4.1",
+    "@univerjs-pro/sheets-exchange-client": "0.4.1"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^2.0.2",

@@ -72,7 +72,7 @@
 </script>
 
 
-<sl-dialog label="Sweet UI v0.10.3 for DNA v0.10.0-dev.0" bind:this={dialog} width={600} >
+<sl-dialog label="Sweet UI v0.10.4 for DNA v0.10.0-dev.0" bind:this={dialog} width={600} >
     <div class="about">
         <p>Sweet is a demonstration Holochain app built by Lightning Rod Labs.</p>
         <p> <b>Developers:</b>
@@ -82,7 +82,7 @@
         </p>
     <p class="small">Copyright © 2023,2024 Holochain Foundation &amp; Lightning Rod Labs.  This software is distributed under the MIT License</p>
     {#if importing}
-        <div class="export-import" title="Import Boards">
+        <div class="export-import" title="Import Documents">
             <div class="spinning" style="margin:auto"><SvgIcon icon=faSpinner color="#fff"></SvgIcon></div>
         </div>
     {:else}
@@ -91,11 +91,11 @@
         </div>
     {/if}
     {#if exporting}
-        <div class="export-import" title="Import Boards">
+        <div class="export-import" title="Import Documents">
             <div class="spinning" style="margin:auto"><SvgIcon icon=faSpinner  color="#fff"></SvgIcon></div>
         </div>
     {:else}
-        <div class="export-import" on:click={()=>{exportAllBoards()}} title="Export All Boards"><SvgIcon color="#fff" icon=faFileExport size=20px style="margin-left: 15px;"/><span>Export All Boards</span></div>
+        <div class="export-import" on:click={()=>{exportAllBoards()}} title="Export All Documents"><SvgIcon color="#fff" icon=faFileExport size=20px style="margin-left: 15px;"/><span>Export All Documents</span></div>
     {/if}
 
 

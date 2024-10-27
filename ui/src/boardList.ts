@@ -29,6 +29,9 @@ import { UniverSheetsFormulaPlugin } from "@univerjs/sheets-formula";
 import { UniverSheetsUIPlugin } from "@univerjs/sheets-ui";
 import { UniverUIPlugin } from "@univerjs/ui";
 
+import { UniverExchangeClientPlugin } from '@univerjs-pro/exchange-client';
+import { UniverSheetsExchangeClientPlugin } from '@univerjs-pro/sheets-exchange-client';
+
 import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
 // import { UniverDebuggerPlugin } from '@univerjs/debugger';
 // import { UniverDocsDrawingUIPlugin } from '@univerjs/docs-drawing-ui';
@@ -292,6 +295,9 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         univer.registerPlugin(UniverSheetsFormulaPlugin);
         univer.registerPlugin(UniverSlidesPlugin);
         univer.registerPlugin(UniverSlidesUIPlugin);
+
+        // univer.registerPlugin(UniverExchangeClientPlugin);
+        // univer.registerPlugin(UniverSheetsExchangeClientPlugin);
 
         // univer.registerPlugin(UniverDocsDrawingUIPlugin);
 

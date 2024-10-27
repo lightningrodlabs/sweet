@@ -55,7 +55,7 @@
   // import { UniverDebuggerPlugin } from '@univerjs/debugger';
   import { UniverSheetsHyperLinkUIPlugin } from '@univerjs/sheets-hyper-link-ui';
   import { IThreadCommentMentionDataService, UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
-  import { UniverThreadCommentPlugin } from '@univerjs/thread-comment';
+  import { UniverThreadCommentPlugin, ThreadCommentDataSourceService } from '@univerjs/thread-comment';
   import { UniverSheetsThreadCommentBasePlugin } from '@univerjs/sheets-thread-comment-base';
   import { UniverFormulaEnginePlugin } from '@univerjs/engine-formula';
   import type { IUniverRPCMainThreadConfig } from '@univerjs/rpc';
@@ -489,6 +489,15 @@
 
   }
 
+  // async function saveComment(comment) {
+    // console.log("COMMENT", comment.params?.unitId, comment.params?.subUnitId, comment.params?.comment?.threadId, comment)
+    // const unitId = currentUniverEditable.getUnitId()
+    // const commentDataService = injector.get(ThreadCommentDataSourceService);
+    // const threadComments = commentDataService.listThreadComments(comment.)
+    // commentDataService.saveToSnapshot(threadComments)
+    
+  // }
+
   function soloCursor() {
     const unitId = currentUniverEditable.getUnitId()
     const textSelectionService = injector.get(DocSelectionManagerService);
@@ -629,7 +638,7 @@
         let opAuthor = c.authorId
 
         // if a comment, just add and move on
-        if (c.id.includes("thread-comment.mutation.add-comment")) {
+        if (c.id.includes("comment")) {
           univerAPI.executeCommand(c.id, c.params, {"fromCollab": true})
         }
         
@@ -749,20 +758,22 @@
     }
   }
 
-  async function getDocumentState(fromCommitHash = null): Promise<[FreezeObject<any>, Uint8Array]> {
-    // console.log(fromCommitHash)
+  async function getDocumentState(fromCommitHash?): Promise<[FreezeObject<any>, Uint8Array]> {
     let wfc: Uint8Array = fromCommitHash;
+    console.log(!wfc, wfc)
     if (!wfc) {
-      const commits = await activeBoard.session.synClient.getCommitsForDocument(activeBoard.document.documentHash)
+      // const commits = await activeBoard.session.synClient.getCommitsForDocument(activeBoard.document.documentHash)
+      const commits = await activeBoard.session.synClient.getWorkspaceTips(activeBoard.workspace.workspaceHash)
+      console.log("all commits", commits)
       wfc = commits[commits.length - 1].target
     }
-    // console.log(wfc)
+    console.log(wfc)
     const latestCommitState = await activeBoard.session.synClient.getCommit(wfc)
-    // console.log(latestCommitState)
+    console.log(latestCommitState)
     const decodedCommitState = decode(latestCommitState.record.entry.Present.entry as Commit)
-    // console.log(decodedCommitState)
+    console.log(decodedCommitState)
     const fullDocument = stateFromCommitOT(decodedCommitState)
-    // console.log(fullDocument)
+    console.log(fullDocument)
     return [fullDocument, wfc]
   }
 
@@ -863,7 +874,7 @@
       if ($clerkStatus == "found") {
         foundClerk = true
       }
-      await delay(50)
+      await delay(100)
     }
   }
 
@@ -871,10 +882,12 @@
     try {
       // If other agents online, wait to find clerk and then document
       if (participants.length > 1) {
+        console.log("all participants", participants)
         const waitClerkProcess = await waitToFindClerk()
         processes.push(waitClerkProcess)
         const initialCommits = await activeBoard.session.sendOperationsToClerk([], 0);
         const wfc: Uint8Array = initialCommits[0] ? decodeHashFromBase64(initialCommits[0].workingFromCommit) as Uint8Array : null
+        console.log("found working wfc from session 1")
         const [fullDocument, latestHash] = await getDocumentState(wfc)
         workingFromCommit = latestHash as Uint8Array
         workingFromState = fullDocument
@@ -884,6 +897,7 @@
         const [fullDocument, latestHash] = await getDocumentState(null)
         workingFromCommit = latestHash as Uint8Array
         workingFromState = fullDocument
+        console.log("found wfc from storage")
       }
     } catch (error) {
       console.error("An error occurred:", error);
@@ -893,6 +907,7 @@
       processes.push(waitClerkProcess)
       const initialCommits = await activeBoard.session.sendOperationsToClerk([], 0);
       const wfc: Uint8Array = initialCommits[0] ? decodeHashFromBase64(initialCommits[0].workingFromCommit) as Uint8Array : null
+      console.log("found working wfc from session 2", wfc, initialCommits[0])
       const [fullDocument, latestHash] = await getDocumentState(wfc)
       workingFromCommit = latestHash as Uint8Array
       workingFromState = fullDocument
@@ -918,7 +933,7 @@
       currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_SHEET, $synState.spreadsheet);
     } else if ($synState.type === "document") {
       currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_DOC, workingFromState.spreadsheet);
-      activeBoard.session._chronicle.set([]);
+      // activeBoard.session._chronicle.set([]);
       await debouncedApplyCommandBatch()
       userManagerService.setCurrentUser(mockUser);
     } else {
@@ -952,17 +967,22 @@
         timeToRetrieve = false
         await debouncedApplyCommandBatch()
       }
-    }, 500)
+    }, 300)
     processes.push(applyCommandBatchInterval)
 
     let beforeCommandListerner = univerAPI.beforeCommandExecuted((command, options) => {  
+      // if (["thread-comment.mutation.update-comment", "thread-comment.mutation.add-comment", "thread-comment.mutation.resolve-comment", "docs.command.delete-comment"].includes(command.id)) {
+      // if (command.id.includes("comment")) {
+        // console.log(command)
+      //   saveComment(command)
+      // }
       if (["doc.operation.move-cursor", "univer.command.copy", "doc.command.inner-paste"].includes(command.id)) {
         soloCursor()
       }
       // TODO: properly implement this cursor movement instead of skipping it
       if (!options?.fromCollab && !command.id.includes("doc.operation.move-")) {
 
-        if (command.id.includes("comment") && command.id.includes("mutation")) {
+        if (["thread-comment.mutation.update-comment", "thread-comment.mutation.add-comment", "thread-comment.mutation.resolve-comment", "docs.command.delete-comment"].includes(command.id)) {
           activeBoard.requestChanges([{type: 'add-comment', comment: removeSymbolFields(changeUndefinedToEmptyString(command))}])
         }
         // else if (command.id == "doc.operation.set-selections" && command.params.isEditing == false) {
@@ -972,7 +992,7 @@
         //   }
         // }
         // else if (command.id.includes("mutation") || (command.id == "doc.operation.set-selections" && command.params.isEditing == false) || command.id.includes("doc.operation.move-")) {
-        if (command.id.includes("mutation") || (command.id == "doc.operation.set-selections" && command.params.isEditing == false && command.params.ranges.length == 1) || command.id.includes("doc.operation.move-")) {
+        if (command.id.includes("mutation") || command.id.includes("docs.command.delete-comment") || (command.id == "doc.operation.set-selections" && command.params.isEditing == false && command.params.ranges.length == 1) || command.id.includes("doc.operation.move-")) {
           
           if (command.id == "doc.operation.set-selections" && command.params.isEditing == false) {
             allSelections[mockUser.userID] = {
@@ -1133,7 +1153,14 @@
 	});
 
   onDestroy( async () => {
-    console.log("PROCESSES", processes, unsubs)
+    // console.log("leave")
+    if (isEqual($clerk, store.myAgentPubKey)) {
+      // console.log("saving")
+      let resTip = await activeBoard.session.commitChanges()
+      // console.log("new tip?", resTip)
+    }
+
+    // console.log("PROCESSES", processes, unsubs)
     processes.forEach(p => clearInterval(p))
     unsubs.forEach(u => u)
   })
@@ -1219,7 +1246,26 @@
       {#if participants}
         <div class="participants">
           <div style="display:flex; flex-direction: row">
-            <!-- <button on:click={() => {
+            <!-- <button on:click={async() => {
+              console.log("saving")
+              let resTip = await activeBoard.session.commitChanges()
+              console.log("new tip?", resTip)
+              // const commits = await activeBoard.session.synClient.getCommitsForDocument(activeBoard.document.documentHash)
+              const commits = await activeBoard.session.synClient.getWorkspaceTips(activeBoard.workspace.workspaceHash)
+              console.log("all commits", commits)
+              let wfc = commits[commits.length - 1].target
+              // console.log("wfc", wfc)
+              console.log(wfc)
+              const latestCommitState = await activeBoard.session.synClient.getCommit(wfc)
+              console.log(latestCommitState)
+              const decodedCommitState = decode(latestCommitState.record.entry.Present.entry)
+              console.log(decodedCommitState)
+              const fullDocument = stateFromCommitOT(decodedCommitState)
+              console.log(fullDocument)
+            }}>
+              Save
+            </button>
+            <button on:click={() => {
               console.log($synState)
             }}>
               paste

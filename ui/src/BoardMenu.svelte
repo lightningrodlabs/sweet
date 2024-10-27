@@ -9,10 +9,17 @@
     import LogoIcon from "./icons/LogoIcon.svelte";
     import BoardMenuItem from "./BoardMenuItem.svelte";
     import { BoardType } from "./boardList";
+    import '@univerjs-pro/exchange-client/lib/index.css';
+    import { LocaleType, Tools } from '@univerjs/core';
+    import ExchangeClientEnUS from '@univerjs-pro/exchange-client/locale/en-US';
+    import { defaultTheme } from '@univerjs/design';
+    import { onMount } from "svelte";
+    
     export let wide = false
 
     let newBoardDialog
     let newBoardDropdown = false
+    let fileInput;
 
     const { getStore } :any = getContext('store');
 
@@ -24,6 +31,33 @@
     $: uiProps = store.uiProps
 
     const bgUrl = "none"
+
+    const uploadDocument = async (e) => {
+        let file = e.target.files[0];
+        let reader = new FileReader();
+
+        reader.addEventListener("load", async () => {
+            console.log(reader.result as string)
+            // const importedBoardStates = deserializeExport(reader.result as string)
+            // if ( importedBoardStates.length > 0) {
+            //     const boards:Array<Board> = []
+            //     for (const b of importedBoardStates) {
+            //         boards.push(await store.boardList.makeBoard(b))
+            //     }
+            //     if (importedBoardStates.length == 1) {
+            //         store.setUIprops({showMenu:false})
+            //         store.setActiveBoard(boards[0].hash)
+            //     }
+            // }
+            // importing = false
+        }, false);
+        // importing = true
+        // reader.readAsText(file);
+        // @ts-ignore
+        // const board = await store.boardList.makeBoard({"name": "Untitled", "type": "spreadsheet"})
+        // store.setUIprops({showMenu:false})
+        // await store.boardList.setActiveBoard(board.hash)
+    }
 
     const addSpreadsheet = async () => {
         // @ts-ignore
@@ -57,7 +91,6 @@
     }
 
     let aboutDialog
-
 </script>
 
 <AboutDialog bind:this={aboutDialog} />
@@ -70,9 +103,11 @@
         {#if newBoardDropdown}
             <div class="new-board" on:click={()=>addSpreadsheet()} title="Spreadsheet"><SvgIcon color="white" size=25px icon=spreadsheet style="margin-left: 15px;"/><span>Spreadsheet</span></div>
             <div class="new-board" on:click={()=>addDocument()} title="Board"><SvgIcon color="white" size=25px icon=textDocument style="margin-left: 15px;"/><span>Document</span></div>
-            <div class="new-board" on:click={()=>{}} title="Presentation"><SvgIcon color="white" size=25px icon=presentation style="margin-left: 15px;"/><span>Presentation <small style="font-size: 11px; line-height: 12px; top: -5px; position: relative;">(comming soon)</small></span></div>
+            <!-- <div class="new-board" on:click={()=>{}} title="Presentation"><SvgIcon color="white" size=25px icon=presentation style="margin-left: 15px;"/><span>Presentation <small style="font-size: 11px; line-height: 12px; top: -5px; position: relative;">(comming soon)</small></span></div> -->
+            <!-- <div class="new-board" on:click={()=>{fileInput.click();}} title="Import"><SvgIcon color="white" size=25px icon=faUpload style="margin-left: 15px;"/><span>Import</span></div>
+            <input style="display:none" type="file" accept=".docx" on:change={(e)=>uploadDocument(e)} bind:this={fileInput} > -->
             <!-- upload/import -->
-            <!-- <div class="new-board" on:click={()=>importFile()} title="Upload"><SvgIcon color="white" size=25px icon=faFileImport style="margin-left: 15px;"/><span>Import file</span></div> -->
+            <!-- <div class="new-board" on:click={()=>uploadDocument()} title="Upload"><SvgIcon color="white" size=25px icon=faFileImport style="margin-left: 15px;"/><span>Import file</span></div> -->
         {/if}
         </div>
 
