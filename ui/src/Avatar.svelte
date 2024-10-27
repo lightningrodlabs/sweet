@@ -10,6 +10,7 @@
   let store: CalcyStore = getStore();
 
   export let agentPubKey: AgentPubKey
+  export let highlight: boolean = false
   export let size = 32
   export let namePosition = "row"
   export let nameColor = "rgba(86, 94, 109, 1.0)"
@@ -38,7 +39,7 @@
                 <SvgIcon color="#fff" icon=faUser size="" style="margin-left:5px;margin-right:5px"></SvgIcon>
             {:else}
             <!-- <div title={nickname}> -->
-                <agent-avatar title={nickname} disable-tooltip={true} disable-copy={true} size={size} agent-pub-key="{agentPubKeyB64}"></agent-avatar>
+                <agent-avatar class:highlighted={highlight} title={nickname} disable-tooltip={true} disable-copy={true} size={size} agent-pub-key="{agentPubKeyB64}"></agent-avatar>
             <!-- </div> -->
             {/if}
         {/if}
@@ -64,5 +65,9 @@
     }
     .avatar-row .nickname{
         margin-left: 0.5em;
+    }
+    .highlighted {
+        border: 4px solid #69e200; 
+        border-radius: 100%;
     }
 </style>

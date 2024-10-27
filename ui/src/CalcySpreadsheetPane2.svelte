@@ -43,7 +43,7 @@
 
   import { LocaleType, LogLevel, ILogService, LocaleService, Univer, UniverInstanceType, type JSONXActions, type ICommand, TextXActionType, TextX, JSONX, ICommandService, CommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
   import { defaultTheme } from '@univerjs/design';
-  import { UniverDocsPlugin, DocSkeletonManagerService, DocSelectionManagerService } from '@univerjs/docs';
+  import { UniverDocsPlugin, DocSelectionManagerService } from '@univerjs/docs';
   import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
   import { UniverRenderEnginePlugin } from '@univerjs/engine-render';
   import { UniverSheetsPlugin } from '@univerjs/sheets';
@@ -485,7 +485,7 @@
     }
 
     await univerAPI.executeCommand(emptySpaceCommand.id, emptySpaceCommand.params, {"fromCollab": true})
-    setCursors()
+    // setCursors()
 
   }
 
@@ -603,7 +603,7 @@
   async function applyCommands(preOps) {
     try {
 
-      // console.log("clerksNewOperations", preOps)
+      console.log("clerksNewOperations", preOps)
 
       safeToType = false
 
@@ -863,7 +863,7 @@
       if ($clerkStatus == "found") {
         foundClerk = true
       }
-      await delay(50)
+      await delay(100)
     }
   }
 
@@ -918,7 +918,7 @@
       currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_SHEET, $synState.spreadsheet);
     } else if ($synState.type === "document") {
       currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_DOC, workingFromState.spreadsheet);
-      activeBoard.session._chronicle.set([]);
+      activeBoard.session._chronicle.set([]); // clear chronicle
       await debouncedApplyCommandBatch()
       userManagerService.setCurrentUser(mockUser);
     } else {
@@ -956,8 +956,9 @@
     processes.push(applyCommandBatchInterval)
 
     let beforeCommandListerner = univerAPI.beforeCommandExecuted((command, options) => {  
+      console.log("COMMAND", command)
       if (["doc.operation.move-cursor", "univer.command.copy", "doc.command.inner-paste"].includes(command.id)) {
-        soloCursor()
+        // soloCursor()
       }
       // TODO: properly implement this cursor movement instead of skipping it
       if (!options?.fromCollab && !command.id.includes("doc.operation.move-")) {
@@ -1081,9 +1082,9 @@
           //   }
           // }
           
-          setTimeout(() => {
-            setCursors()
-          }, 20)
+          // setTimeout(() => {
+          //   setCursors()
+          // }, 20)
 
           lastTypedTime = Date.now()
           timeToRetrieve = true
@@ -1219,7 +1220,7 @@
       {#if participants}
         <div class="participants">
           <div style="display:flex; flex-direction: row">
-            <!-- <button on:click={() => {
+            <button on:click={() => {
               console.log($synState)
             }}>
               paste
@@ -1233,15 +1234,16 @@
               Fetch
             </button>
             <button on:click={() => {buildFromCommands(chronicleEstimation)}}>build</button>
-            {JSON.stringify(allSelections)}
+            <!-- {JSON.stringify(allSelections)} -->
             {JSON.stringify($clerkStatus)}
             {JSON.stringify(chronicleEstimation[chronicleEstimationLength - 1]?.params?.actions)}
             {chronicleEstimation.length}
-            {$chronicle.length} -->
+            {$chronicle.length}
 
             <div style="margin: 7px; display: flex; flex-direction: row;" title="In order to work together, you must be synced with collaborators">
               {$clerkStatus == "found" ? "Synced" : "Syncing..."}
             </div>
+            {isEqual($clerk, store.myAgentPubKey)}
             <div style="display:flex; justify-content:flex-end">
               <!-- {JSON.stringify($clerk)} -->
               <Participants board={activeBoard} highlightedAgent={$clerk} max={10}></Participants>

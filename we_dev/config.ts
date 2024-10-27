@@ -30,6 +30,16 @@ export default defineConfig({
             },
           },
         },
+        // {
+        //   agentIdx: 3,
+        //   agentProfile: {
+        //     nickname: 'Leo',
+        //     avatar: {
+        //       type: 'filesystem',
+        //       path: './we_dev/zerbina.jpg',
+        //     },
+        //   },
+        // },
       ],
       applets: [
         {

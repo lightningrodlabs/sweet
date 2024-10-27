@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getContext, onDestroy, onMount } from "svelte";
+  import { getContext, onMount } from "svelte";
   import type { CalcyStore } from "./store";
   import { v1 as uuidv1 } from "uuid";
   import type {  Board, BoardDelta, BoardProps } from "./board";
@@ -74,7 +74,7 @@
   import { UniverSlidesUIPlugin } from '@univerjs/slides-ui';
   import { FUniver } from "@univerjs/facade";
   import { text } from "svelte/internal";
-  import { SynClient, stateFromCommitOT, type Commit, type SessionMessage } from "@holochain-syn/core";
+  import { SynClient, stateFromCommitOT, type Commit } from "@holochain-syn/core";
     import { FreezeObject, from } from "automerge";
     // import { act } from "react";
 
@@ -100,12 +100,8 @@
   let resetStrikes = 0;
   let safeToType = true; // to prevent typing while fetching new operations
   let unsafeToTypeBacklog = [] // to store typing events while unsafe to type
-  let keyDownCount = 0;
   let lastTypedTime = Date.now()
-  let timeToRetrieve = false
-
-  let processes = []
-  let unsubs = []
+  let keyDownCount = 0;
 
   let univer = new Univer({
     theme: defaultTheme,
@@ -179,18 +175,27 @@
   const iLogService = injector.get(ILogService)
   const userManagerService = injector.get(UserManagerService);
   const univerAPI = injector.get(ICommandService);
+  // const univerAPI = new CommandService(injector, iLogService)
+  // const univerAPI = injector.createInstance(FUniver);
+  // const univerAPI = FUniver.newAPI(injector);
+  // console.log(injector, iLogService, univerAPI)
+  
+  // let previousState = {};
+  // $: uiProps = store.uiProps
+  // $: participants = activeBoard.participants()
+  // $: activeHashB64 = store.boardList.activeBoardHashB64;
   $: activeHash = store.boardList.activeBoardHash;
   $: synState = activeBoard.readableState()
+  // $: synComplexState = activeBoard.session.state
   $: clerkStatus = activeBoard.session ? activeBoard.session.clerkStatus: null
+  // $: chronicle = activeBoard.session ? activeBoard.session.chronicle: null
+  // $: participants = activeBoard.sessionParticipants()
   $: clerk = activeBoard.session ? activeBoard.session.clerk: null
-  $: chronicle = activeBoard.session ? activeBoard.session.chronicle: null
 
   let workingFromCommit: Uint8Array;
-  let workingFromState: any;
   let chronicleEstimation = []
   let chronicleEstimationLength = 0
   let lastSelection = {startOffset: 0, endOffset: 0}
-  let loading = true;
 
   const mockUser = {
     userID: encodeHashToBase64(store.myAgentPubKey),
@@ -426,7 +431,7 @@
     }]
     activeBoard.requestChanges(changes)
     // previousState = {...cloneDeep($synState)}
-}
+  }
 
   const closeBoard = async () => {
     await store.closeActiveBoard(false);
@@ -457,7 +462,28 @@
     activeBoard.requestChanges([{type: 'set-props', props : newProps }])
   }
 
-  async function hackRefresh() {
+  // function refreshDocumentByDocData() {
+  //   // const irender = new IRenderManagerService
+  //   // const x = irender.getRenderAll()
+  //   // console.log(x)
+    
+  //   const docModel = currentUniverEditable
+  //   const docViewModel = new DocumentViewModel(docModel);
+  //   const localeService = new LocaleService();
+  //   const documentSkeleton = DocumentSkeleton.create(docViewModel, localeService)
+  //   documentSkeleton.getViewModel().getDataModel().updateDocumentDataPageSize(1000, 1 / 0), documentSkeleton.calculate();
+  // }
+
+  // function refreshDocument() {
+  //   const docModel = currentUniverEditable
+  //   const docViewModel = new DocumentViewModel(docModel);
+  //   docViewModel.reset(docModel);
+  //   const localeService = new LocaleService();
+  //   const documentSkeleton = DocumentSkeleton.create(docViewModel, localeService)
+  //   documentSkeleton.calculate();
+  // }
+
+  async function hackRefresh(selection) {
     // console.log("hack refresh selection", selection)
     const unitId = currentUniverEditable.getUnitId()
 
@@ -485,49 +511,39 @@
     }
 
     await univerAPI.executeCommand(emptySpaceCommand.id, emptySpaceCommand.params, {"fromCollab": true})
+    // univerAPI.executeCommand(clickCommand.id, clickCommand.params, {"fromCollab": true})
+
+    // let cursor = new MemoryCursor()
+    // cursor.reset()
+    // cursor.moveCursor(3)
+    // console.log("cursor", cursor)
+    // allSelections[mockUser.userID] = selection
     setCursors()
 
   }
 
-  function soloCursor() {
-    const unitId = currentUniverEditable.getUnitId()
-    const textSelectionService = injector.get(DocSelectionManagerService);
-    const snapshotLength = currentUniverEditable.getSnapshot().body.dataStream.replaceAll(/\n/g, '').length - 1
-    let selections = []
-
-    let mySelection = allSelections[mockUser.userID]
-
-    selections.push({
-      collapsed: true,
-      direction: "none",
-      isActive: true,
-      startOffset: Math.min(mySelection ? mySelection.startOffset : 0, snapshotLength),
-      endOffset: Math.min(mySelection ? mySelection.endOffset : 0, snapshotLength),
-      style: {
-        strokeWidth: 5,
-        stroke: 'rgb(223 141 27 / 1)',
-        strokeActive: 'rgb(223 141 27 / 1)',
-        fill: 'rgb(223 141 27 / 1)',
-      }
-    })
-
-    textSelectionService.replaceDocRanges(
-      selections,
-      {
-        unitId: unitId,
-        subUnitId: unitId,
-      },
-      true,
-      {}
-    )
-  }
-
   function setCursors() {
-    // console.log("allSelections", allSelections)
+    console.log("allSelections", allSelections)
 
     const unitId = currentUniverEditable.getUnitId()
     const textSelectionService = injector.get(DocSelectionManagerService);
+    // const docRanges = textSelectionService.getDocRanges()
+    // const currentSelection = textSelectionService.getActiveTextRange()
+    // console.log("currentSelection", docRanges)
     let selections = []
+
+    // selections.push(
+    //   {
+    //     collapsed: true,
+    //     direction: "none",
+    //     isActive: false,
+    //     startOffset: 0,
+    //     endOffset: 0,
+    //   }
+    // )
+
+    // for each in allSelections
+
     const snapshotLength = currentUniverEditable.getSnapshot().body.dataStream.replaceAll(/\n/g, '').length - 1
 
     Object.keys(allSelections).forEach(author => {
@@ -550,7 +566,19 @@
       })
     })
 
+    // selections.push({
+    //   startOffset: 3,
+    //   endOffset: 9,
+    //   style: {
+    //     strokeWidth: 5,
+    //     stroke: '150 15 15 / 1)',
+    //     strokeActive: 'rgb(150 15 15 / 1)',
+    //     fill: 'rgb(150 15 15 / 1)',
+    //   }
+    // })
+
     let mySelection = allSelections[mockUser.userID]
+    // console.log("my selection", mySelection, allSelections, mockUser.userID)
 
     selections.push({
       collapsed: true,
@@ -566,6 +594,18 @@
       }
     })
 
+    // console.log("textSelectionService", docRanges)
+    // let selectionInfo = textSelectionService.getSelectionInfo()
+    // console.log("selectionInfo", docRanges, currentSelection, selections)
+
+    // replaceDocRanges(
+    //     docRanges: ISuccinctDocRangeParam[],
+    //     params: Nullable<IDocSelectionManagerSearchParam> = this._currentSelection,
+    //     isEditing = true,
+    //     options?: { [key: string]: boolean }
+    // ) {
+    // console.log("CURSOR *** selections", allSelections, snapshotLength, JSON.stringify(currentUniverEditable.getSnapshot().body.dataStream))
+
     textSelectionService.replaceDocRanges(
       selections,
       {
@@ -575,6 +615,20 @@
       true,
       {}
     )
+
+    // let cursorCommand = {
+    //   "id": "doc.operation.set-selections",
+    //   "type": 2,
+    //   "params": {
+    //     "unitId": unitId,
+    //     "ranges": selections
+    //   }
+    // }
+    // univerAPI.executeCommand(cursorCommand.id, cursorCommand.params, {"fromCollab": true})
+    
+    // univerAPI.executeCommand(emptySpaceCommand.id, emptySpaceCommand.params, {"fromCollab": true})
+
+    // textSelectionService.refreshSelection()
   }
 
 
@@ -600,141 +654,334 @@
   }
   let positionChanges: PositionChange[] = []
 
-  async function applyCommands(preOps) {
-    try {
-
-      // console.log("clerksNewOperations", preOps)
-
-      safeToType = false
-
-      // ==================UN-APPLY MY OPERATIONS==================
-      for (let i = toCommit.length - 1; i >= 0; i--) {
-        let c = toCommit[i]
-        // console.log("to commit", extractHumanReadableFromCommands([c])[0])
-        let operations = extractActionsFromCommands([c])
-        if (operations.find(op => op.t == "d" || op.t == "r")) {
-          operations = TextX.makeInvertible(operations, currentUniverEditable.getSnapshot().body)
-        }
-        let reversedOps = TextX.invert(operations)
-        // console.log("reversedOps", reversedOps)
-        TextX.apply(currentUniverEditable.getSnapshot().body, reversedOps)
-      }
-      // ==================UN-APPLY MY OPERATIONS ENDS==================
-
-      // ==================APPLY CLERK'S NEW OPERATIONS==================
-      let allTransformedOps = []
-      const combinedOps = preOps.concat(toCommit)
-      for (let i = 0; i < combinedOps.length; i++) {
-        let c = combinedOps[i]
-        let opAuthor = c.authorId
-
-        // if a comment, just add and move on
-        if (c.id.includes("thread-comment.mutation.add-comment")) {
-          univerAPI.executeCommand(c.id, c.params, {"fromCollab": true})
-        }
-        
-        let operations = extractActionsFromCommands([c])
-        let chronicleEstimationPreview = chronicleEstimation.concat([c])
-        let firstKnownLocalCommandIndex = chronicleEstimationPreview.findIndex(command => command.uniqueId === c.firstKnownLocalCommandId)
-        let lastKnownExternalCommandIndex = Math.max(-1, chronicleEstimationPreview.findIndex(command => command.uniqueId === c.lastKnownExternalCommandId))
-        let unknownCommands = chronicleEstimationPreview.slice(lastKnownExternalCommandIndex + 1, firstKnownLocalCommandIndex)
-    
-        // ****adjust clerk's new operations according to their unknown ops****
-        let unknownOps = extractActionsFromCommands(unknownCommands)
-        let transformedOps = operations
-        let lastRetainPosition = unknownOps[0]?.len ? unknownOps[0].len : 0
-        unknownOps.forEach(op => {
-          if (op.t === "r") {
-            lastRetainPosition = op.len
-          }
-          if (transformedOps[0] && lastRetainPosition <= transformedOps[0].len) {
-            transformedOps = TextX.transform(transformedOps, [op], "left")
-          }
-        })
-        
-        allTransformedOps = allTransformedOps.concat(transformedOps)
-        TextX.apply(currentUniverEditable.getSnapshot().body
-        , transformedOps)
-        
-        chronicleEstimation.push({
-          ...c,
-          transformed: transformedOps
-        })
-        chronicleEstimationLength += 1
-
-        if (!isEqual($clerk, store.myAgentPubKey)) {
-          activeBoard.session.saveOperationsToChronicle([{
-            ...c,
-            transformed: transformedOps
-          }])
-        }
-
-
-        // ==================CHANGE CURSOR POSITOINS==================
-        // If it's a set, set
-        if (c.id.includes("doc.operation.set-selections")) {
-          // console.log(3)
-          allSelections[opAuthor] = {
-            startOffset: c.params.ranges[0].startOffset,
-            endOffset: c.params.ranges[0].endOffset
-          }
-        }
-        // only change if this command is an external command we haven't already dealt with
-        // else if (opAuthor != mockUser.userID) {
-        else {
-          // for each selection
-          Object.keys(allSelections).forEach(author => {
-            // if this author's selection, transform all
-            if (author == opAuthor) {
-              const opPos = transformedOps[transformedOps.length - 2]?.len + transformedOps[transformedOps.length - 1]?.len
-              allSelections[author] = {
-                startOffset: opPos ? opPos : TextX.transformPosition(transformedOps, allSelections[author].startOffset),
-                endOffset: opPos ? opPos : TextX.transformPosition(transformedOps, allSelections[author].endOffset)
-              }
-            }
-            // if other selection, check if after command
-            // only change if this command is an external command we haven't already dealt with
-            else if (opAuthor != mockUser.userID) {
-              let cStart = transformedOps[0]?.len
-              let cAdd = transformedOps[1]?.len
-              let opPos = cAdd ? cStart + cAdd : cStart
-              if (opPos <= allSelections[author].startOffset) {
-                allSelections[author].startOffset = TextX.transformPosition(operations, allSelections[author].startOffset)
-              }
-              if (opPos <= allSelections[author].endOffset) {
-                allSelections[author].endOffset = TextX.transformPosition(transformedOps, allSelections[author].endOffset)
-              }
-            }
-            // ==================CHANGE CURSOR POSITOINS ENDS==================
-          })
-        }
-      }
-      
-      chronicleEstimation = [...chronicleEstimation];
-
-      // SAVE DOCUMENT IF I'M THE CLERK
-      if (isEqual($clerk, store.myAgentPubKey)) {
-        const newSynState = {
-          ...$synState.spreadsheet,
-          body: currentUniverEditable.getSnapshot().body
-        }
-        activeBoard.requestChanges([{type: 'set-spreadsheet', spreadsheet: removeSymbolFields(newSynState)}])
-      }
-
-      hackRefresh()
-      safeToTypeAgain()
-    } catch(e) {
-      console.log(e)
-      safeToTypeAgain()
-    }
-  }
-
   const debouncedApplyCommandBatch = debounce(async() => {
+    // ================CURSOR POSITION==================
+    // const textSelectionService = injector.get(DocSelectionManagerService);
+    // const docRanges = textSelectionService.getDocRanges()
+    // let currentSelection1 = textSelectionService.getActiveTextRange()
+    // let cursorPosition = currentSelection1?.startOffset ? currentSelection1?.startOffset : 0
+    // console.log("cursor position", cursorPosition)
+    // let cursorPosition = TextX.transformPosition()
+    // ================CURSOR POSITION ENDS==================
     
+    // console.log("sending to clerk", toCommit, chronicleEstimationLength - 1)
     const preOps = await activeBoard.session.sendOperationsToClerk(toCommit, chronicleEstimationLength - 1);
+    console.log("clerksNewOperations", preOps)
+
+    safeToType = false
+
+    // if (preOps.length === 0) {
+    //   chronicleEstimation = chronicleEstimation.concat(toCommit)
+    //   chronicleEstimationLength += toCommit.length
+    //   chronicleEstimation = [...chronicleEstimation];
+    //   toCommit = []
+    //   safeToTypeAgain()
+    //   return;
+    // }
     
-    await applyCommands(preOps)
+    // let commandSelection = {
+    //   startOffset: toCommit[toCommit.length - 1]?.params?.textRanges[0]?.startOffset,
+    //   endOffset: toCommit[toCommit.length - 1]?.params?.textRanges[0]?.endOffset
+    // }
+
+    // ==================UN-APPLY MY OPERATIONS==================
+    for (let i = toCommit.length - 1; i >= 0; i--) {
+      // if (toCommit[i].id.includes("thread-comment-ui.operation.set-active-comment") || toCommit[i].id.includes("doc.operation.set-selections")) {
+        //   continue
+        // }
+        // for (let i = 0; i < toCommit.length - 1; i++) {
+      let c = toCommit[i]
+      console.log("to commit", extractHumanReadableFromCommands([c])[0])
+      let operations = extractActionsFromCommands([c])
+      if (operations.find(op => op.t == "d" || op.t == "r")) {
+        operations = TextX.makeInvertible(operations, currentUniverEditable.getSnapshot().body)
+      }
+      let reversedOps = TextX.invert(operations)
+      // console.log("reversedOps", reversedOps)
+      TextX.apply(currentUniverEditable.getSnapshot().body, reversedOps)
+    }
+    // ==================UN-APPLY MY OPERATIONS ENDS==================
+      
+    // console.log("applied", localTransformsReverse.length, "cursorposition", cursorPosition)
+
+    // commandSelection = {
+    //   startOffset: TextX.transformPosition(localTransformsReverse, commandSelection.startOffset),
+    //   endOffset: TextX.transformPosition(localTransformsReverse, commandSelection.endOffset)
+    // }
+    // console.log("command selection 2", commandSelection)
+
+    // ==================APPLY CLERK'S NEW OPERATIONS==================
+    let allTransformedOps = []
+    const combinedOps = preOps.concat(toCommit)
+    for (let i = 0; i < combinedOps.length; i++) {
+      let c = combinedOps[i]
+      console.log("a")
+      // console.log("C authorid", c.authorId)
+      let opAuthor = c.authorId
+
+      // if (c.id.includes("thread-comment-ui.operation.set-active-comment")) {
+      //   continue
+      // }
+      console.log("b")
+
+      // if a comment, just add and move on
+      if (c.id.includes("thread-comment.mutation.add-comment")) {
+        univerAPI.executeCommand(c.id, c.params, {"fromCollab": true})
+      }
+      console.log("c")
+      
+      if (c.id.includes("doc.operation.move-")) {
+        let currentUserSelection = allSelections[opAuthor]
+        let directionCodes = [0,1,0,-1]
+        allSelections[opAuthor] = {
+          startOffset: currentUserSelection.startOffset + Number(directionCodes[c.params.direction]),
+          endOffset: currentUserSelection.endOffset + Number(directionCodes[c.params.direction]),
+        }
+      } else if (c.id.includes("doc.operation.set-selections")) {
+        // SET SELECTIONS FROM SET SELECTIONS
+        allSelections[opAuthor] = {
+          startOffset: c.params.ranges[0].startOffset,
+          endOffset: c.params.ranges[0].endOffset
+        }
+      } else if (c.params?.actions) {
+        // SET SELECTIONS FROM TYPING
+        let cStart = c.params?.actions[1]?.e[0]?.len
+        let cAdd = c.params?.actions[1]?.e[1]?.len
+        let pos = cAdd ? cStart + cAdd : cStart
+        if (pos) {
+          allSelections[opAuthor] = {
+            startOffset: pos,
+            endOffset: pos
+          }
+        }
+      }
+      console.log("d")
+      
+      let operations = extractActionsFromCommands([c])
+      let chronicleEstimationPreview = chronicleEstimation.concat([c])
+      let firstKnownLocalCommandIndex = chronicleEstimationPreview.findIndex(command => command.uniqueId === c.firstKnownLocalCommandId)
+      let lastKnownExternalCommandIndex = Math.max(-1, chronicleEstimationPreview.findIndex(command => command.uniqueId === c.lastKnownExternalCommandId))
+      let unknownCommands = chronicleEstimationPreview.slice(lastKnownExternalCommandIndex + 1, firstKnownLocalCommandIndex)
+      console.log("e", unknownCommands)
+   
+      // ****adjust clerk's new operations according to their unknown ops****
+      let unknownOps = extractActionsFromCommands(unknownCommands)
+      let transformedOps = operations
+      let lastRetainPosition = unknownOps[0]?.len ? unknownOps[0].len : 0
+      console.log("unknownops", unknownOps)
+      unknownOps.forEach(op => {
+        if (op.t === "r") {
+          lastRetainPosition = op.len
+        // } else if (op.t === "i") {
+        //   lastCursorPosition += op.len
+        // } else if (op.t === "d") {
+        //   lastCursorPosition -= op.len
+        }
+        if (transformedOps[0] && lastRetainPosition <= transformedOps[0].len) {
+          // console.log('-', op.len, transformedOps[0].len)
+          transformedOps = TextX.transform(transformedOps, [op], "left")
+        }
+
+        console.log("O KEYS", Object.keys(allSelections))
+        // Object.keys(allSelections).forEach(author => {
+        //   console.log("==", lastRetainPosition, allSelections[author].startOffset)
+        //   if (lastRetainPosition <= allSelections[author].startOffset) {
+        //     allSelections[author].startOffset = TextX.transformPosition([op], allSelections[author].startOffset)
+        //   }
+        //   if (lastRetainPosition <= allSelections[author].endOffset) {
+        //     allSelections[author].endOffset = TextX.transformPosition([op], allSelections[author].endOffset)
+        //   }
+        // })
+      })
+      
+      // transforms = TextX.transform(transforms, unknownOps, "left")
+      // let applyTransforms = transforms
+      allTransformedOps = allTransformedOps.concat(transformedOps)
+      TextX.apply(currentUniverEditable.getSnapshot().body
+      , transformedOps)
+      // cursorPosition = TextX.transformPosition(transformedOps, cursorPosition)
+      // console.log("applied", transformedOps, transformedOps.length, "cursorposition", cursorPosition)      
+      
+      // add author's cursor position
+      // let opAuthor = encodeHashToBase64(c.authorId)
+      // let lastRetainIndex = transformedOps.findLastIndex(op => op.t == "r")
+      // lastRetainIndex = lastRetainIndex >= 0 ? lastRetainIndex : transformedOps.length - 1
+      // let lastInsertIndex = transformedOps.findLastIndex(op => op.t == "i")
+      // lastInsertIndex = lastInsertIndex >= 0 ? lastInsertIndex : transformedOps.length - 1
+      // console.log("lastRetainIndex", lastRetainIndex, transformedOps)
+      // console.log(transformedOps[lastRetainIndex])
+      // let lastRetainPosition = transformedOps[lastRetainIndex].len + (transformedOps[lastInsertIndex].len || 0)
+      // allSelections[opAuthor] = {
+      //   startOffset: lastRetainPosition,
+      //   endOffset: lastRetainPosition
+      // }
+      
+      chronicleEstimation.push({
+        ...c,
+        transformed: transformedOps
+      })
+      chronicleEstimationLength += 1
+
+
+      // ==================CHANGE CURSOR POSITOINS==================
+      Object.keys(allSelections).forEach(author => {
+        if (c.authorId != mockUser.userID) {
+          try {
+            if (c.id.includes("doc.operation.set-selections")) {
+              // console.log("c params", c.params)
+              // // SET SELECTIONS FROM SET SELECTIONS
+              // allSelections[author] = {
+              //   startOffset: c.params.ranges[0].startOffset,
+              //   endOffset: c.params.ranges[0].endOffset
+              // }
+            } else {
+
+              let cStart = transformedOps[0] ? transformedOps[0]?.len : 0
+              let cAdd = transformedOps[1] ? transformedOps[1]?.len : 0
+              let opPos = cAdd ? cStart + cAdd : cStart
+              console.log("pos", opPos, cStart, cAdd)
+
+              if (opPos <= allSelections[author].startOffset) {
+                let selection = allSelections[author]
+                let startOffset = TextX.transformPosition(transformedOps, selection.startOffset)
+                let endOffset = TextX.transformPosition(transformedOps, selection.endOffset)
+                console.log("transformed", selection.startOffset, " => ", startOffset)
+                if (startOffset >= 0 && endOffset >= 0) {
+                  allSelections[author] = {
+                    startOffset,
+                    endOffset
+                  }
+                }
+              }
+            // }
+            }
+          } catch (e) {
+            console.log("error", e)
+          }
+        }
+      })
+      // ==================CHANGE CURSOR POSITOINS ENDS==================
+    }
+    
+    // console.log("all transformed ops", allTransformedOps)
+    // ==================APPLY CLERK'S NEW OPERATIONS ENDS==================
+
+
+    // // ==================CHANGE CURSOR POSITOINS==================
+    // const newCommandsCount = combinedOps.length
+    // chronicleEstimation.slice(chronicleEstimationLength - newCommandsCount).forEach(command => {
+    //   // if (command.authorId != mockUser.userID) {
+    //     console.log(1)
+    //     Object.keys(allSelections).forEach(author => {
+    //       console.log(2)
+    //       if (author != command.authorId) {
+    //         try {
+    //           if (command.id.includes("doc.operation.set-selections")) {
+    //             console.log(3)
+    //             // SET SELECTIONS FROM SET SELECTIONS
+    //             allSelections[author] = {
+    //               startOffset: command.params.ranges[0].startOffset,
+    //               endOffset: command.params.ranges[0].endOffset
+    //             }
+    //           } else {
+    //             console.log(4)
+    //           // if (author != mockUser.userID) {
+    //             let cStart = command.transformed ? command.transformed[0]?.len : 0
+    //             let cAdd = command.transformed ? command.transformed[1]?.len : 0
+    //             let pos = cAdd ? cStart + cAdd : cStart
+
+    //             console.log(pos, allSelections[author].startOffset)
+
+    //             if (pos <= allSelections[author].startOffset) {
+    //               let selection = allSelections[author]
+    //               let startOffset = TextX.transformPosition(command.transformed, selection.startOffset)
+    //               let endOffset = TextX.transformPosition(command.transformed, selection.endOffset)
+    //               console.log("transformed", startOffset, selection.startOffset)
+    //               if (startOffset >= 0 && endOffset >= 0) {
+    //                 allSelections[author] = {
+    //                   startOffset,
+    //                   endOffset
+    //                 }
+    //               }
+    //             }
+    //           // }
+    //           }
+    //         } catch (e) {
+    //           console.log("error", e)
+    //         }
+    //       }
+    //     })
+    //   // }
+    // })
+    // // ==================CHANGE CURSOR POSITOINS ENDS==================
+
+    // ==================RE-APPLY MY OPERATIONS==================
+      // ****adjust local operations according to clerk's new operations, which have themselves been transformed****
+    // let localOpsTransformed = []
+    // localOps.forEach(localOp => {
+    //   let localOpTransformed = localOp
+    //   allTransformedOps.forEach(newOp => {
+    //     if (newOp.len <= localOp?.len) {
+    //       localOpTransformed = TextX.transform([localOpTransformed], [newOp], "left")
+    //       console.log("-")
+    //     }
+    //   })
+    //   localOpsTransformed = localOpsTransformed.concat(localOpTransformed)
+    // })
+
+    // console.log("localOpsTransformed", localOpsTransformed)
+    //   // localTransforms = TextX.transform(localTransforms, transforms)
+
+    // if (localOpsTransformed.length == 0) {
+    //   localOpsTransformed = localOps
+    // }
+    // TextX.apply(currentUniverEditable.getSnapshot().body, localOpsTransformed)
+    // cursorPosition = TextX.transformPosition(localOpsTransformed, cursorPosition)
+    // console.log("applied", localOpsTransformed.length, "cursorposition", cursorPosition)
+    // ==================RE-APPLY MY OPERATIONS ENDS==================
+
+    // lastSelection = {
+    //   startOffset: TextX.transformPosition(localTransforms, commandSelection.startOffset),
+    //   endOffset: TextX.transformPosition(localTransforms, commandSelection.endOffset)
+    // }
+
+    // chronicleEstimation = chronicleEstimation.concat(toCommit)
+    // chronicleEstimationLength += toCommit.length
+    chronicleEstimation = [...chronicleEstimation];
+    // console.log("chronicleEstimation", chronicleEstimation)
+    
+    // console.log("last selection", lastSelection, "command selection", commandSelection, "localTransforms", localTransforms)
+
+    // get index of last local transform
+    // let finalLocalTransformOp = localTransforms[localTransforms.length - 1]
+    // let semiFinalLocalTransformOp = localTransforms[localTransforms.length - 2]
+
+    // console.log("final local transforms", finalLocalTransformOp, semiFinalLocalTransformOp, localTransforms)
+    // let finalDocIndex = 0;
+    // if (finalLocalTransformOp && semiFinalLocalTransformOp && finalLocalTransformOp.len && semiFinalLocalTransformOp.len) {
+    //   finalDocIndex = finalLocalTransformOp.len + semiFinalLocalTransformOp.len
+    // } else if (finalLocalTransformOp && finalLocalTransformOp.len) {
+    //   finalDocIndex = finalLocalTransformOp.len
+    // } else if (semiFinalLocalTransformOp && semiFinalLocalTransformOp.len) {
+    //   finalDocIndex = semiFinalLocalTransformOp.len
+    // }
+
+    // SAVE DOCUMENT IF I'M THE CLERK
+    if (isEqual($clerk, store.myAgentPubKey)) {
+      const newSynState = {
+        ...$synState.spreadsheet,
+        body: currentUniverEditable.getSnapshot().body
+      }
+      activeBoard.requestChanges([{type: 'set-spreadsheet', spreadsheet: removeSymbolFields(newSynState)}])
+    }
+
+    hackRefresh({
+      startOffset: 0,//cursorPosition,
+      endOffset: 0,//cursorPosition
+    })
+    
     toCommit = []
+    safeToTypeAgain()
   }, 100);
 
   async function safeToTypeAgain() {
@@ -750,19 +997,15 @@
   }
 
   async function getDocumentState(fromCommitHash = null): Promise<[FreezeObject<any>, Uint8Array]> {
-    // console.log(fromCommitHash)
-    let wfc: Uint8Array = fromCommitHash;
+    console.log(0)
+    let wfc = fromCommitHash;
     if (!wfc) {
       const commits = await activeBoard.session.synClient.getCommitsForDocument(activeBoard.document.documentHash)
       wfc = commits[commits.length - 1].target
     }
-    // console.log(wfc)
     const latestCommitState = await activeBoard.session.synClient.getCommit(wfc)
-    // console.log(latestCommitState)
     const decodedCommitState = decode(latestCommitState.record.entry.Present.entry as Commit)
-    // console.log(decodedCommitState)
     const fullDocument = stateFromCommitOT(decodedCommitState)
-    // console.log(fullDocument)
     return [fullDocument, wfc]
   }
 
@@ -784,18 +1027,17 @@
         ),
       },
     });
-    let testDoc = univer2.createUnit(UniverInstanceType.UNIVER_DOC, workingFromState.spreadsheetf);
-    
-    // let operations = extractActionsFromCommands(commands)
+    let testDoc = univer2.createUnit(UniverInstanceType.UNIVER_DOC, {});
+    let operations = extractActionsFromCommands(commands)
     // let composed = TextX.apply(testDoc.getSnapshot().body, operations)
 
-    // TextX.apply(testDoc.getSnapshot().body, operations)
+    TextX.apply(testDoc.getSnapshot().body, operations)
 
-    for (let i = 0; i < commands.length; i++) {
-      let c = commands[i]
-      let operations = extractActionsFromCommands([c])
-      TextX.apply(testDoc.getSnapshot().body, operations)
-    }
+    // for (let i = 0; i < commands.length; i++) {
+    //   let c = commands[i]
+    //   let operations = extractActionsFromCommands([c])
+    //   TextX.apply(testDoc.getSnapshot().body, operations)
+    // }
 
     // let composed = TextX.apply({}, operations)
     // operations.forEach(op => {
@@ -809,11 +1051,9 @@
     console.log("identicalStrings", identicalStrings)
     if (!identicalStrings) {
     // if (true) {
-      currentUniverEditable.snapshot = testDoc.snapshot
-      hackRefresh()  
-      // const hash = $activeHash;
-      // await store.closeActiveBoard(false);
-      // await store.setActiveBoard(hash);
+      const hash = $activeHash;
+      await store.closeActiveBoard(false);
+      await store.setActiveBoard(hash);
       // currentUniverEditable.snapshot.body = $synState.spreadsheet.body
       // console.log($synState)
       // TextX.apply(currentUniverEditable.getSnapshot().body, operations)
@@ -858,49 +1098,24 @@
   }
 
   async function waitToFindClerk() {
-    let foundClerk = false
-    while (!foundClerk) {
-      if ($clerkStatus == "found") {
-        foundClerk = true
-      }
-      await delay(50)
-    }
+    
   }
 
   async function openPage() {
-    try {
-      // If other agents online, wait to find clerk and then document
-      if (participants.length > 1) {
-        const waitClerkProcess = await waitToFindClerk()
-        processes.push(waitClerkProcess)
-        const initialCommits = await activeBoard.session.sendOperationsToClerk([], 0);
-        const wfc: Uint8Array = initialCommits[0] ? decodeHashFromBase64(initialCommits[0].workingFromCommit) as Uint8Array : null
-        const [fullDocument, latestHash] = await getDocumentState(wfc)
-        workingFromCommit = latestHash as Uint8Array
-        workingFromState = fullDocument
-      }
-      // If no other agents online, load last document and assign myself clerk
-      else {
-        const [fullDocument, latestHash] = await getDocumentState(null)
-        workingFromCommit = latestHash as Uint8Array
-        workingFromState = fullDocument
-      }
-    } catch (error) {
-      console.error("An error occurred:", error);
-    } finally {
-      // If above process fails, try again
-      const waitClerkProcess = await waitToFindClerk()
-      processes.push(waitClerkProcess)
-      const initialCommits = await activeBoard.session.sendOperationsToClerk([], 0);
-      const wfc: Uint8Array = initialCommits[0] ? decodeHashFromBase64(initialCommits[0].workingFromCommit) as Uint8Array : null
-      const [fullDocument, latestHash] = await getDocumentState(wfc)
-      workingFromCommit = latestHash as Uint8Array
-      workingFromState = fullDocument
-    }
+    // chronicleEstimation = await activeBoard.session.sendOperationsToClerk([], 0)
+    // chronicleEstimationLength = chronicleEstimation.length
+    // let wfh = null
+    // if (chronicleEstimationLength > 0) {
+    //   wfh = chronicleEstimation[chronicleEstimationLength - 1].workingFromCommit
+    // }
+    const [fullDocument, latestHash] = await getDocumentState(null)
+    workingFromCommit = latestHash
+    console.log("DECODED COMMIT", fullDocument, workingFromCommit)
 
-    loading = false
-
+    console.log("PARTICIPANTS", Array.from(participants.entries()))
+    console.log("MY PROFILE", mockUser, myProfile)
     let synSavedProfiles = $synState.users
+    console.log("SYN SAVED PROFILES", synSavedProfiles)
     let userIdFound = false
     synSavedProfiles.forEach(profile => {
       if (profile.userID != mockUser.userID) {
@@ -914,23 +1129,33 @@
       activeBoard.requestChanges([{type: 'add-user', user: mockUser}])
     }
 
+    const savedBoard = await activeBoard.readableState()
     if ($synState.type === "spreadsheet") {
+      // console.log("spreadsheet")
       currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_SHEET, $synState.spreadsheet);
     } else if ($synState.type === "document") {
-      currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_DOC, workingFromState.spreadsheet);
-      activeBoard.session._chronicle.set([]);
+      console.log("not spreadsheet")
+      currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_DOC, fullDocument.spreadsheet);
+      console.log("JUST CREATED IT", currentUniverEditable)
       await debouncedApplyCommandBatch()
+      // hackRefresh({
+      //   startOffset: 0,
+      //   endOffset: 0
+      // })
+      // $synState.commands?.forEach(command => {
+      //   // console.log("executing command", command)
+      //   appliedCommandIds.push(command.uniqueId)
+      // })
       userManagerService.setCurrentUser(mockUser);
     } else {
+      // console.log("not spreadsheet")
       currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_SLIDE, $synState.spreadsheet);
     }
+    console.log(currentUniverEditable)
 
-    $synState.commentCommands.forEach(comment => {
-      // console.log("executing comment", comment)
-      univerAPI.executeCommand(comment.id, comment.params, {"fromCollab": true})
-    })
-
+    // previousState = cloneDeep($synState)
     lastReceivedState = cloneDeep($synState)
+    // console.log("clonedeep", previousState)
 
     if ($synState.type == "spreadsheet") {
       window.addEventListener("keydown", checkKey);
@@ -938,6 +1163,13 @@
     } else if ($synState.type == "document") {
       window.addEventListener("keydown", checkKey);
     }
+
+    // funiver = FUniver.newAPI(univer);
+    // execute all commands
+    // $synState.commands?.forEach(command => {
+    //   console.log("executing command", command)
+    //   funiver.executeCommand(command.id, command.params)
+    // })
 
     // SET CURSORS
     participants.forEach(userHash => {
@@ -947,24 +1179,28 @@
       }
     })
 
-    const applyCommandBatchInterval = setInterval(async() => {
-      if ($clerkStatus == "found" && Date.now() - lastTypedTime > 500 && timeToRetrieve) {
-        timeToRetrieve = false
-        await debouncedApplyCommandBatch()
-      }
-    }, 500)
-    processes.push(applyCommandBatchInterval)
+    // $synState.commentCommands.forEach(comment => {
+    //   // console.log("executing comment", comment)
+    //   univerAPI.executeCommand(comment.id, comment.params, {"fromCollab": true})
+    // })
 
-    let beforeCommandListerner = univerAPI.beforeCommandExecuted((command, options) => {  
-      if (["doc.operation.move-cursor", "univer.command.copy", "doc.command.inner-paste"].includes(command.id)) {
-        soloCursor()
+    setInterval(async() => {
+      if ($clerkStatus == "found" && Date.now() - lastTypedTime > 2000) {
+        debouncedApplyCommandBatch()
       }
+    }, 1000)
+
+    univerAPI.beforeCommandExecuted((command, options) => {  
+      // console.log("++++++++++++ command", command, "options", options)
+
+      lastTypedTime = Date.now()
+
       // TODO: properly implement this cursor movement instead of skipping it
       if (!options?.fromCollab && !command.id.includes("doc.operation.move-")) {
 
-        if (command.id.includes("comment") && command.id.includes("mutation")) {
-          activeBoard.requestChanges([{type: 'add-comment', comment: removeSymbolFields(changeUndefinedToEmptyString(command))}])
-        }
+        // if (command.id.includes("comment") && command.id.includes("mutation")) {
+        //   activeBoard.requestChanges([{type: 'add-comment', comment: removeSymbolFields(changeUndefinedToEmptyString(command))}])
+        // }
         // else if (command.id == "doc.operation.set-selections" && command.params.isEditing == false) {
         //   allSelections[mockUser.userID] = {
         //     startOffset: command.params.ranges[0].startOffset,
@@ -983,6 +1219,7 @@
           else if (command.id.includes("doc.operation.move-")) {
             let currentUserSelection = allSelections[mockUser.userID]
             let directionCodes = [0,1,0,-1]
+            console.log("current user selection", currentUserSelection, "command", command)
             allSelections[mockUser.userID] = {
               startOffset: currentUserSelection.startOffset + Number(directionCodes[command.params.direction]),
               endOffset: currentUserSelection.endOffset + Number(directionCodes[command.params.direction]),
@@ -1010,7 +1247,7 @@
                   let selection = allSelections[author]
                   let startOffset = TextX.transformPosition(command.params.actions[1]?.e, selection.startOffset)
                   let endOffset = TextX.transformPosition(command.params.actions[1]?.e, selection.endOffset)
-                  // console.log("transformed", startOffset, selection.startOffset)
+                  console.log("transformed", startOffset, selection.startOffset)
                   if (startOffset >= 0 && endOffset >= 0) {
                     allSelections[author] = {
                       startOffset,
@@ -1044,7 +1281,7 @@
             authorId: authorId,
             // previousCommandUniqueId: lastKnownCommand,
             // lastKnownCommandIndex,
-            workingFromCommit: encodeHashToBase64(workingFromCommit),
+            workingFromCommit,
             lastKnownExternalCommandId,
             firstKnownLocalCommandId,
           }
@@ -1084,10 +1321,6 @@
           setTimeout(() => {
             setCursors()
           }, 20)
-
-          lastTypedTime = Date.now()
-          timeToRetrieve = true
-
           // if (keyDownCount % 5 == 0) {
           //   keyDownCount += 1
           //   debouncedApplyCommandBatch()
@@ -1100,43 +1333,16 @@
         // }
       }
     })
-    unsubs.push(beforeCommandListerner)
   }
 
   onMount(async () => {
     await registerPlugins();
     await openPage();
 
-    const unsub = activeBoard.session.synClient.onSignal(synSignal => {
-      if (synSignal.type !== 'SessionMessage') return;
-      // if (isEqual(synSignal.provenance, activeBoard.session.myPubKey)) return;
-
-      const message: SessionMessage = synSignal.message;
-      if (
-        message &&
-        isEqual(message.workspace_hash, activeBoard.workspace.workspaceHash)
-      ) {
-        if (message.payload.type === 'NewOperationsBroadcast') {
-          // console.log("New Operations Broadcast", message.payload.operations.map(c => decode(c) as any))
-          if (message.payload.operations.length > 0 && toCommit.length == 0 && !timeToRetrieve) {
-            const decodedOps = message.payload.operations.map(c => decode(c) as any)
-            applyCommands(decodedOps)
-          }
-        }
-      }
-    });
-    unsubs.push(unsub)
-
     // return () => {
     //   window.removeEventListener("click", checkKey);
     // };
 	});
-
-  onDestroy( async () => {
-    console.log("PROCESSES", processes, unsubs)
-    processes.forEach(p => clearInterval(p))
-    unsubs.forEach(u => u)
-  })
   
   const copyWalToPocket = () => {
     const attachment: WAL = { hrl: [store.dnaHash, activeBoard.hash], context: "" }
@@ -1219,12 +1425,7 @@
       {#if participants}
         <div class="participants">
           <div style="display:flex; flex-direction: row">
-            <!-- <button on:click={() => {
-              console.log($synState)
-            }}>
-              paste
-            </button>
-            <button 
+            <!-- <button 
               class="board-button" 
               on:click={() => {
                 debouncedApplyCommandBatch()
@@ -1232,12 +1433,11 @@
             >
               Fetch
             </button>
-            <button on:click={() => {buildFromCommands(chronicleEstimation)}}>build</button>
+            <button on:click={() => {buildFromCommands(chronicleEstimation)}}>build</button> -->
             {JSON.stringify(allSelections)}
             {JSON.stringify($clerkStatus)}
-            {JSON.stringify(chronicleEstimation[chronicleEstimationLength - 1]?.params?.actions)}
+            <!-- {JSON.stringify(chronicleEstimation[chronicleEstimationLength - 1]?.params?.actions)} -->
             {chronicleEstimation.length}
-            {$chronicle.length} -->
 
             <div style="margin: 7px; display: flex; flex-direction: row;" title="In order to work together, you must be synced with collaborators">
               {$clerkStatus == "found" ? "Synced" : "Syncing..."}
@@ -1264,12 +1464,6 @@
   {#if $synState}
 
   <!-- on:click={debouncedMaybeSave} -->
-  {#if loading}
-    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; width: 100vw;">
-      Joining session...
-      <sl-spinner></sl-spinner>
-    </div>
-  {/if}
   <div
     id="univer-container" style="height:100%; position: relative;">---</div>
   {/if}

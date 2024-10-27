@@ -1,6 +1,7 @@
 <script lang="ts">
     import Toolbar from './Toolbar.svelte'
     import CalcyPane from './CalcyPane.svelte'
+    import CalcySpreadsheetPane from './CalcySpreadsheetPane.svelte';
     import { CalcyStore } from './store'
     import { setContext } from 'svelte';
     import type { AppClient } from '@holochain/client';
@@ -8,6 +9,7 @@
     import type { ProfilesStore } from "@holochain-open-dev/profiles";
     import BoardMenu from "./BoardMenu.svelte";
     import type { WeaveClient } from '@lightningrodlabs/we-applet';
+    import { get } from 'svelte/store';
 
     export let roleName = ""
     export let client : AppClient
@@ -24,6 +26,7 @@
     let resetVar = true;
 
     $: activeBoardHash = store.boardList.activeBoardHash
+    $: boardData = $activeBoardHash ? store.boardList.boardData2.get($activeBoardHash) : null
     $: activeBoard = store.boardList.activeBoard
     $: participants = $activeBoard ? $activeBoard.sessionParticipants() : undefined
     $: profiles = $participants ? profilesStore.allProfiles : undefined
@@ -87,8 +90,15 @@
           {#if $profile?.status == "complete"}
             {#if $profiles?.status == "complete"}
               {#if $activeBoardHash !== undefined && profiles}
+                {#if $boardData.status == "complete"}
                 {#if resetVar}
-                  <CalcyPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/>
+                    {@const readableBoard = $activeBoard.readableState()}
+                    {#if $boardData.value.latestState.type === "spreadsheet"}
+                      <CalcySpreadsheetPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/>
+                    {:else if $boardData.value.latestState.type === "document"}
+                      <CalcyPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/>
+                    {/if}
+                  {/if}
                 {/if}
               {/if}
             {/if}

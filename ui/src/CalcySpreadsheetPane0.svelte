@@ -27,7 +27,7 @@
   import "@univerjs/design/lib/index.css";
   import "@univerjs/ui/lib/index.css";
   import "@univerjs/sheets-ui/lib/index.css";
-  import "@univerjs/sheets-formula/lib/index.css";
+  // import "@univerjs/sheets-formula/lib/index.css";
   import "@univerjs/docs-ui/lib/index.css";
   
   import ThreadCommentUIEnUS from '@univerjs/thread-comment-ui/locale/en-US';
