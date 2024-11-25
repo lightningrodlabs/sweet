@@ -4,7 +4,7 @@
     import { CalcyStore } from './store'
     import { setContext } from 'svelte';
     import type { AppClient, EntryHash } from '@holochain/client';
-    import type { OTSynStore } from '@holochain-syn/core';
+    import type { OTSynStore } from '@leosprograms/syn-core';
     import type { ProfilesStore } from "@holochain-open-dev/profiles";
     import type { WeaveClient } from '@lightningrodlabs/we-applet';
     import { onMount } from 'svelte';

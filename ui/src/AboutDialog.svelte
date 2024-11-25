@@ -7,7 +7,7 @@
     import { BoardType } from "./boardList";
     import type { Board, BoardEphemeralState, BoardState } from "./board";
     import { deserializeExport, exportBoards } from "./export";
-    import { DocumentStore, WorkspaceStore } from "@holochain-syn/core";
+    import { DocumentStore, WorkspaceStore } from "@leosprograms/syn-core";
     import { encodeHashToBase64 } from "@holochain/client";
 
 
@@ -72,7 +72,7 @@
 </script>
 
 
-<sl-dialog label="Sweet UI v0.10.4 for DNA v0.10.0-dev.0" bind:this={dialog} width={600} >
+<sl-dialog label="Sweet UI v0.10.6 for DNA v0.10.0-dev.1" bind:this={dialog} width={600} >
     <div class="about">
         <p>Sweet is a demonstration Holochain app built by Lightning Rod Labs.</p>
         <p> <b>Developers:</b>

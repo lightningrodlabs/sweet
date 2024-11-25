@@ -59,14 +59,33 @@
   import { UniverDocsDrawingUIPlugin } from '@univerjs/docs-drawing-ui';
   import { UniverDocsThreadCommentUIPlugin } from '@univerjs/docs-thread-comment-ui';
 
-    import ThreadCommentUIEnUS from '@univerjs/thread-comment-ui/locale/en-US';
-    import SheetsThreadCommentEnUS from '@univerjs/sheets-thread-comment/locale/en-US';
-    import DesignEnUS from '@univerjs/design/locale/en-US';
-    import DocsUIEnUS from '@univerjs/docs-ui/locale/en-US';
-    import SheetsEnUS from '@univerjs/sheets/locale/en-US';
-    import SheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US';
-    import UIEnUS from '@univerjs/ui/locale/en-US';
+  import ThreadCommentUIEnUS from '@univerjs/thread-comment-ui/locale/en-US';
+  import SheetsThreadCommentEnUS from '@univerjs/sheets-thread-comment/locale/en-US';
+  import DesignEnUS from '@univerjs/design/locale/en-US';
+  import DocsUIEnUS from '@univerjs/docs-ui/locale/en-US';
+  import SheetsEnUS from '@univerjs/sheets/locale/en-US';
+  import SheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US';
+  import UIEnUS from '@univerjs/ui/locale/en-US';
 
+
+  import { UniverSheetsConditionalFormattingPlugin } from '@univerjs/sheets-conditional-formatting';
+  import { UniverSheetsFilterPlugin } from '@univerjs/sheets-filter';
+  import { UniverSheetsFormulaUIPlugin } from '@univerjs/sheets-formula-ui';
+  import { UniverSheetsHyperLinkPlugin } from '@univerjs/sheets-hyper-link';
+  // import { UniverSheetsNumfmtUIPlugin } from '@univerjs/sheets-numfmt-ui';
+  // import { UniverSheetsThreadCommentUIPlugin } from '@univerjs/sheets-thread-comment-ui';
+
+  // import '@univerjs/sheets/facade';
+  // import '@univerjs/ui/facade';
+  // import '@univerjs/docs-ui/facade';
+  // import '@univerjs/sheets-ui/facade';
+  // import '@univerjs/sheets-data-validation/facade';
+  // import '@univerjs/engine-formula/facade';
+  // import '@univerjs/sheets-filter/facade';
+  // import '@univerjs/sheets-formula/facade';
+  // import '@univerjs/sheets-numfmt/facade';
+  // import '@univerjs/sheets-hyper-link-ui/facade';
+  // import '@univerjs/sheets-thread-comment/facade';
   
     // import {Univer } from "@univerjs/core";
     // import { defaultTheme } from "@univerjs/design";
@@ -262,7 +281,14 @@
     }
 
      // ================== Register Plugins ==================
-  function registerPlugins() {
+     
+     function registerPlugins() {
+    univer.registerPlugin(UniverSheetsFormulaUIPlugin);
+    univer.registerPlugin(UniverSheetsConditionalFormattingPlugin);
+    univer.registerPlugin(UniverSheetsFilterPlugin);
+    univer.registerPlugin(UniverSheetsHyperLinkPlugin);
+    // univer.registerPlugin(UniverThreadCommentUIPlugin);
+    // univer.registerPlugin(UniverSheetsThreadCommentPlugin);
     univer.registerPlugin(UniverDocsPlugin, {
         hasScroll: false,
     });
@@ -285,13 +311,13 @@
     });
 
     univer.registerPlugin(UniverSheetsPlugin, {
-        notExecuteFormula: true,
+        notExecuteFormula: false,
     });
     univer.registerPlugin(UniverSheetsUIPlugin);
     univer.registerPlugin(UniverSheetsNumfmtPlugin);
     univer.registerPlugin(UniverSheetsZenEditorPlugin);
     univer.registerPlugin(UniverFormulaEnginePlugin, {
-        notExecuteFormula: true,
+        notExecuteFormula: false,
     });
     univer.registerPlugin(UniverSheetsFormulaPlugin);
     univer.registerPlugin(UniverRPCMainThreadPlugin, {

@@ -1,4 +1,4 @@
-import { defineConfig } from '@lightningrodlabs/we-dev-cli';
+import { defineConfig } from '@theweave/cli';
 
 export default defineConfig({
   groups: [
@@ -7,15 +7,15 @@ export default defineConfig({
       networkSeed: '098rc1m-09384u-crm-29384u-cmkj',
       icon: {
         type: 'filesystem',
-        path: './we_dev/lrl-icon.png',
+        path: './weave/lrl-icon.png',
       },
       creatingAgent: {
         agentIdx: 1,
         agentProfile: {
-          nickname: 'Zippy',
+          nickname: 'Bob',
           avatar: {
             type: 'filesystem',
-            path: './we_dev/zippy.jpg',
+            path: './weave/zippy.jpg',
           },
         },
       },
@@ -23,10 +23,10 @@ export default defineConfig({
         {
           agentIdx: 2,
           agentProfile: {
-            nickname: 'Zerbina',
+            nickname: 'Alita',
             avatar: {
               type: 'filesystem',
-              path: './we_dev/zerbina.jpg',
+              path: './weave/zerbina.jpg',
             },
           },
         },
@@ -36,15 +36,15 @@ export default defineConfig({
         //     nickname: 'Leo',
         //     avatar: {
         //       type: 'filesystem',
-        //       path: './we_dev/zerbina.jpg',
+        //       path: './weave/zerbina.jpg',
         //     },
         //   },
         // },
       ],
       applets: [
         {
-          name: 'Xylem',
-          instanceName: 'Xylem',
+          name: 'Sweet',
+          instanceName: 'Sweet',
           registeringAgent: 1,
           joiningAgents: [2],
         },
@@ -65,12 +65,12 @@ export default defineConfig({
   ],
   applets: [
     {
-      name: 'Xylem',
-      subtitle: 'Tables',
+      name: 'Sweet',
+      subtitle: 'Sweet',
       description: 'Real-time collaborative tables based on syn.',
       icon: {
         type: 'filesystem',
-        path: './we_dev/calcy.svg',
+        path: './weave/calcy.svg',
       },
       source: {
         type: 'localhost',
@@ -78,31 +78,31 @@ export default defineConfig({
         uiPort: 8888,
       },
     },
-    {
-        name: 'gamez',
-        subtitle: 'play!',
-        description: 'Real-time games based on syn',
-        icon: {
-          type: "https",
-          url: "https://raw.githubusercontent.com/holochain-apps/gamez/main/we_dev/gamez_icon.svg"
-        },
-        source: {
-          type: "https",
-          url: "https://github.com/holochain-apps/gamez/releases/download/v0.4.2/gamez.webhapp"
-        },
-      },
-      {
-      name: 'talking-stickies',
-      subtitle: 'talking stickies',
-      description: 'Real-time stickies based on syn',
-      icon: {
-        type: 'https',
-        url: 'https://raw.githubusercontent.com/holochain-apps/talking-stickies/main/we_dev/talking-stickies_icon.png',
-      },
-      source: {
-        type: 'https',
-        url: 'https://github.com/holochain-apps/talking-stickies/releases/download/v0.9.1/talking-stickies.webhapp',
-      },
-    },
+    // {
+    //     name: 'gamez',
+    //     subtitle: 'play!',
+    //     description: 'Real-time games based on syn',
+    //     icon: {
+    //       type: "https",
+    //       url: "https://raw.githubusercontent.com/holochain-apps/gamez/main/weave/gamez_icon.svg"
+    //     },
+    //     source: {
+    //       type: "https",
+    //       url: "https://github.com/holochain-apps/gamez/releases/download/v0.4.2/gamez.webhapp"
+    //     },
+    //   },
+    //   {
+    //   name: 'talking-stickies',
+    //   subtitle: 'talking stickies',
+    //   description: 'Real-time stickies based on syn',
+    //   icon: {
+    //     type: 'https',
+    //     url: 'https://raw.githubusercontent.com/holochain-apps/talking-stickies/main/weave/talking-stickies_icon.png',
+    //   },
+    //   source: {
+    //     type: 'https',
+    //     url: 'https://github.com/holochain-apps/talking-stickies/releases/download/v0.9.1/talking-stickies.webhapp',
+    //   },
+    // },
   ],
 });

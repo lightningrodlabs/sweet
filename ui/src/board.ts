@@ -1,4 +1,4 @@
-import type { OTDocumentStore, OTSessionStore, OTWorkspaceStore, OTSynStore } from "@holochain-syn/core";
+import type { OTDocumentStore, OTSessionStore, OTWorkspaceStore, OTSynStore } from "@leosprograms/syn-core";
 import { get, type Readable } from "svelte/store";
 import { v1 as uuidv1 } from "uuid";
 import { type AgentPubKey, type EntryHash, type EntryHashB64, encodeHashToBase64, type AgentPubKeyB64, type Timestamp } from "@holochain/client";
@@ -124,8 +124,6 @@ export interface BoardState {
           }
           break;
         case "add-user":
-          console.log("ADDING USER", delta.user)
-          console.log("was", state.users)
           state.users.push(delta.user)
           break;
         case "add-comment":
@@ -182,6 +180,8 @@ export class Board {
       }
     }
 
+    await me.leave()
+
     return me
   }
 
@@ -190,16 +190,14 @@ export class Board {
   }
 
   async join() {
-    if (! this.session) 
+    if (!this.session) 
       this.session = await this.workspace.joinSession()
-    console.log("JOINED", this.session)
   }
   
   async leave() {
     if (this.session) {
       this.session.leaveSession()
       this.session = undefined
-      console.log("LEFT SESSION")
     }
   }
 

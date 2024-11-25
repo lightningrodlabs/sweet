@@ -12,4 +12,4 @@ name = "syn"
 #derive_more = "0"
 #serde = { workspace = true }
 
-hc_zome_syn_coordinator = {git = "https://github.com/holochain/syn", branch = "feature/OT"}
+hc_zome_syn_coordinator = {git = "https://github.com/holochain/syn", branch = "feature/OT-0.4"}

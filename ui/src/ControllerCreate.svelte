@@ -2,7 +2,7 @@
   import { CalcyStore } from './store'
   import { setContext } from 'svelte';
   import type { AppAgentClient } from '@holochain/client';
-  import { OTSynStore, SynClient } from '@holochain-syn/core';
+  import { OTSynStore, SynClient } from '@leosprograms/syn-core';
   import type { ProfilesStore } from "@holochain-open-dev/profiles";
   import type { WeClient } from '@lightningrodlabs/we-applet';
   import { getMyDna } from './util';
@@ -12,6 +12,7 @@
   export let weClient : WeClient
   export let profilesStore : ProfilesStore
   export let view
+  export let docType: string;
   let store: CalcyStore = new CalcyStore (
     weClient,
     profilesStore,
@@ -37,7 +38,7 @@ let disabled = true
     <div class="workspace" style="display:flex; flex-direction:column;padding:20px;">
       <sl-input bind:this={inputElement}
         on:sl-input={(e)=>disabled = !e.target.value}
-        label="Spreadsheet Name"></sl-input>
+        label="Choose a title for this {docType}"></sl-input>
         <div style="margin-top:10px;display:flex;justify-content:flex-end">
           <sl-button 
             style="margin-right:10px;"
@@ -46,9 +47,12 @@ let disabled = true
             try {
               const synStore = new OTSynStore(new SynClient(client, roleName));
               //const hrlB64 = hrlWithContextToB64(attachToHrlWithContext)
-              const board = await Board.Create(synStore, {/*boundTo:[hrlB64]*/name: inputElement.value})
+
+              // const board = await Board.Create(synStore, {/*boundTo:[hrlB64]*/name: inputElement.value})
+              const board = await store.boardList.makeBoard({"name": inputElement.value, "type": docType})
               const dnaHash = await getMyDna(roleName, client)
-              view.resolve({hrl:[dnaHash, board.hash]})
+              const attachment = { hrl: [store.dnaHash, board.hash], context: JSON.stringify({docType: docType}) }
+              view.resolve(attachment)
             } catch(e) {
               console.log("ERR",e)
               view.reject(e)

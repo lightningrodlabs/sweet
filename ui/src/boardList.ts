@@ -2,7 +2,7 @@ import { HoloHashMap, LazyHoloHashMap } from "@holochain-open-dev/utils";
 import { derived, get, writable, type Readable, type Writable } from "svelte/store";
 import { type AgentPubKey, type EntryHash, type EntryHashB64, encodeHashToBase64 } from "@holochain/client";
 import {toPromise, type AsyncReadable, pipe, joinAsync, asyncDerived, sliceAndJoin, alwaysSubscribed} from '@holochain-open-dev/stores'
-import { OTSynStore, OTWorkspaceStore } from "@holochain-syn/core";
+import { OTSynStore, OTWorkspaceStore } from "@leosprograms/syn-core";
 import type { ProfilesStore } from "@holochain-open-dev/profiles";
 import { cloneDeep } from "lodash";
 import { Board, type BoardDelta, type BoardState } from "./board";
@@ -84,7 +84,6 @@ export class BoardList {
         const tip = pipe(board,
             board => board.workspace.tip
             )
-        console.log("boardData2:main")
 return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latestState, board]) => {return {board, latestState, tip: tip ? tip.entryHash : undefined}}))
     })
 
@@ -102,7 +101,6 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
                         //agentDocuments.push(asyncDerived(state, state=>{return {hash, state}}))
                         const x = this.boardData2.get(hash)
                         if (x) {
-                            console.log("agentBoardHashes")
                             agentBoardHashes.push(x)
                         }
                     }
@@ -118,7 +116,6 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
     constructor(public profilseStore: ProfilesStore, public synStore: OTSynStore) {
         this.allAgentBoards = pipe(this.profilseStore.agentsWithProfile,
             agents=>{
-                console.log("allAgentBoards")
                 return sliceAndJoin(this.agentBoardHashes, agents, {errors: "filter_out"})
             }
         )
@@ -176,8 +173,8 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         if (hash) {
             board = (await toPromise(this.boardData2.get(hash))).board
             if (board) {
+                let sessionParticipants = await toPromise(board.sessionParticipants())
                 await board.join()
-                console.log("joined")
                 this.activeBoard.update((n) => {return board} )
             } else {
                 console.log("NO BOARD")
@@ -295,24 +292,13 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         univer.registerPlugin(UniverSheetsFormulaPlugin);
         univer.registerPlugin(UniverSlidesPlugin);
         univer.registerPlugin(UniverSlidesUIPlugin);
-
-        // univer.registerPlugin(UniverExchangeClientPlugin);
-        // univer.registerPlugin(UniverSheetsExchangeClientPlugin);
-
-        // univer.registerPlugin(UniverDocsDrawingUIPlugin);
-
-        // let newSheet = univer.createUniverSheet({});
-        // let newSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {});
-
-        // univer.registerPlugin(UniverDocsDrawingUIPlugin);
+        
         if (options.type == "spreadsheet") {
             const newSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {});
             options.spreadsheet = newSheet.save()
         } else if (options.type == "document") {
-            console.log(4)
             let newDoc = univer.createUnit(UniverInstanceType.UNIVER_DOC, {});
             if (!options.spreadsheet) {
-                console.log(5)
                 options.spreadsheet = newDoc.snapshot
             }
         } else {
@@ -320,9 +306,9 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
             if (!options.spreadsheet) {
                 options.spreadsheet = newPres
             }
-            console.log("new presentation", newPres)
         }
         const board = await Board.Create(this.synStore, options)
+        // this.activeBoard.update((n) => {return board} )
         return board
     }
 }

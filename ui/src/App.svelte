@@ -31,6 +31,7 @@
     App,
     WAL,
     CreateSpreadsheet,
+    CreateDocument,
     BlockActiveBoards
   }
 
@@ -94,11 +95,15 @@
               }
               break;
             case "creatable":
-            switch (weClient.renderInfo.view.name) {
+              switch (weClient.renderInfo.view.name) {
                 case "spreadsheet":
                   renderType = RenderType.CreateSpreadsheet
                   createView = weClient.renderInfo.view
-              }              
+                  break;
+                case "document":
+                  renderType = RenderType.CreateDocument
+                  createView = weClient.renderInfo.view
+              }
               break;
             case "asset":
               switch (weClient.renderInfo.view.recordInfo.roleName) {
@@ -176,7 +181,9 @@
    Error when loading profile: {$prof.error}
   {:else}
     {#if renderType== RenderType.CreateSpreadsheet}
-      <ControllerCreate  view={createView} client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerCreate>
+      <ControllerCreate docType="spreadsheet" view={createView} client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerCreate>
+    {:else if renderType== RenderType.CreateDocument}
+      <ControllerCreate docType="document" view={createView} client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerCreate>
     {:else if renderType== RenderType.App}
       <Controller  client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></Controller>
     {:else if  renderType== RenderType.WAL}

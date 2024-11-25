@@ -11,7 +11,7 @@ import {
     type Timestamp,
     type DnaHash,
   } from '@holochain/client';
-import { OTSynStore,  SynClient} from '@holochain-syn/core';
+import { OTSynStore,  SynClient} from '@leosprograms/syn-core';
 import { BoardList } from './boardList';
 import TimeAgo from "javascript-time-ago"
 import en from 'javascript-time-ago/locale/en'

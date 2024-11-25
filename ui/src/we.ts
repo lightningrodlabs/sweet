@@ -1,11 +1,12 @@
-import { DocumentStore, SynClient, OTSynStore, OTWorkspaceStore } from '@holochain-syn/core';
+import { OTDocumentStore, SynClient, OTSynStore, OTWorkspaceStore } from '@leosprograms/syn-core';
 import type { BoardEphemeralState, BoardState } from './board';
 import { asyncDerived, pipe, sliceAndJoin, toPromise } from '@holochain-open-dev/stores';
 import { BoardType } from './boardList';
 import { LazyHoloHashMap } from '@holochain-open-dev/utils';
-import type { AppletHash, AppletServices, AssetInfo, WAL, RecordInfo } from '@lightningrodlabs/we-applet';
+import type { AppletHash, AppletServices, AssetInfo, RecordInfo, WAL, WeaveServices } from '@theweave/api';
 import { getMyDna } from './util';
-import type { AppClient, RoleName, ZomeName } from '@holochain/client';
+import type { AppClient, RoleName } from '@holochain/client';
+
 
 const ROLE_NAME = "calcy"
 const ZOME_NAME = "syn"
@@ -41,10 +42,10 @@ export const appletServices: AppletServices = {
         label: "Spreadsheet",
         icon_src: spreadsheetIcon,
       },
-      'document': {
-        label: "Document",
-        icon_src: textDocumentIcon,
-      }
+      // 'document': {
+      //   label: "Document",
+      //   icon_src: textDocumentIcon,
+      // }
     },
     // Types of UI widgets/blocks that this Applet supports
     blockTypes: {
@@ -70,12 +71,11 @@ export const appletServices: AppletServices = {
         const synClient = new SynClient(appletClient, roleName, ZOME_NAME);
         const synStore = new OTSynStore(synClient);
         const documentHash = wal.hrl[1]
-        const docStore = new DocumentStore<BoardState, BoardEphemeralState> (synStore, documentHash)
+        const docStore = new OTDocumentStore<BoardState, BoardEphemeralState> (synStore, documentHash)
         const workspaces = await toPromise(docStore.allWorkspaces)
         const workspace = new OTWorkspaceStore(docStore, Array.from(workspaces.keys())[0])
         const latestState = await toPromise(workspace.latestState)
         const docType = JSON.parse(wal.context).docType
-        console.log("ATTACHMENT INFO", recordInfo, docType)
 
         return {
           icon_src: docType == "document" ? textDocumentIcon : spreadsheetIcon,
@@ -88,7 +88,7 @@ export const appletServices: AppletServices = {
     search: async (
       appletClient: AppClient,
       appletHash: AppletHash,
-      weServices: WeServices,
+      weaveServices: WeaveServices,
       searchFilter: string
     ): Promise<Array<WAL>> => {
         const synClient = new SynClient(appletClient, ROLE_NAME, ZOME_NAME);
@@ -115,14 +115,17 @@ export const appletServices: AppletServices = {
 
         const allBoards = Array.from((await toPromise(allBoardsAsync)).entries())
         const dnaHash = await getMyDna(ROLE_NAME, appletClient)
+        const searchText = searchFilter.toLowerCase()
 
-        return allBoards
+        let hrls: Array<WAL> = allBoards
             .filter((r) => !!r)
             .filter((r) => {
                 const state = r[1]
-                return state.name.toLowerCase().includes(searchFilter.toLowerCase())
+                return state.name.toLowerCase().includes(searchText)
             })
             .map((r) => ({ hrl: [dnaHash, r![0]], context: undefined }));
+        
+        return hrls
     },
 };
   
