@@ -1317,6 +1317,22 @@
               }}
             >ensure newline</button> -->
 
+            <button
+              on:click={
+                console.log(currentUniverEditable.getBody().dataStream)
+              }
+            >
+              Console
+            </button>
+
+            <button
+              on:click={
+                console.log($chronicle)
+              }
+            >
+              Chronicle
+            </button>
+
             <!-- <button
               class="board-button"
               on:click={async () => {
@@ -1328,7 +1344,7 @@
               Send empty array
             </button> -->
 
-            <!-- {JSON.stringify($chronicle.length)} -->
+            {JSON.stringify($chronicle.length)}
             <!-- {JSON.stringify(workingFromCommit)} -->
 
             <div style="margin: 7px; display: flex; flex-direction: row;" title="In order to work together, you must be synced with collaborators">
