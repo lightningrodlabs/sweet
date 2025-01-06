@@ -25,7 +25,7 @@
   import type { WAL } from "@lightningrodlabs/we-applet";
   import '@lightningrodlabs/we-elements/dist/elements/wal-embed.js';
 
-  import "@univerjs/sheets-numfmt/lib/index.css";
+  // import "@univerjs/sheets-numfmt/lib/index.css";
   import '@univerjs/thread-comment-ui/lib/index.css';
   import "@univerjs/design/lib/index.css";
   import "@univerjs/ui/lib/index.css";
@@ -34,7 +34,7 @@
   import "@univerjs/docs-ui/lib/index.css";
   
   import ThreadCommentUIEnUS from '@univerjs/thread-comment-ui/locale/en-US';
-  import SheetsThreadCommentEnUS from '@univerjs/sheets-thread-comment/locale/en-US';
+  // import SheetsThreadCommentEnUS from '@univerjs/sheets-thread-comment/locale/en-US';
   import DesignEnUS from '@univerjs/design/locale/en-US';
   import DocsUIEnUS from '@univerjs/docs-ui/locale/en-US';
   import SheetsEnUS from '@univerjs/sheets/locale/en-US';
@@ -49,26 +49,28 @@
   import { UniverSheetsPlugin } from '@univerjs/sheets';
   import { UniverSheetsUIPlugin } from '@univerjs/sheets-ui';
   import { UniverUIPlugin } from '@univerjs/ui';
-  import { IRangeSelectorService, RangeSelector, TextEditor, IEditorService } from '@univerjs/docs-ui';
+  import { IRangeSelectorService, TextEditor, IEditorService } from '@univerjs/docs-ui';
   import { UniverSheetsConditionalFormattingUIPlugin } from '@univerjs/sheets-conditional-formatting-ui';
-  import { UniverSheetsThreadCommentPlugin } from '@univerjs/sheets-thread-comment';
+  // import { UniverSheetsThreadCommentPlugin } from '@univerjs/sheets-thread-comment';
   // import { UniverDebuggerPlugin } from '@univerjs/debugger';
   import { UniverSheetsHyperLinkUIPlugin } from '@univerjs/sheets-hyper-link-ui';
-  import { IThreadCommentMentionDataService, UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
-  import { UniverThreadCommentPlugin, ThreadCommentDataSourceService } from '@univerjs/thread-comment';
-  import { UniverSheetsThreadCommentBasePlugin } from '@univerjs/sheets-thread-comment-base';
+  import { UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
+  import { UniverThreadCommentPlugin } from '@univerjs/thread-comment';
+  import { UniverDocsThreadCommentUIPlugin } from '@univerjs/docs-thread-comment-ui';
+ 
+  import '@univerjs/thread-comment-ui/lib/index.css';
+  // import { UniverSheetsThreadCommentBasePlugin } from '@univerjs/sheets-thread-comment-base';
   import { UniverFormulaEnginePlugin } from '@univerjs/engine-formula';
   import type { IUniverRPCMainThreadConfig } from '@univerjs/rpc';
   import { UniverRPCMainThreadPlugin } from '@univerjs/rpc';
   import { UniverSheetsFormulaPlugin } from '@univerjs/sheets-formula';
-  import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt';
+  // import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt';
   import { UniverSheetsDataValidationPlugin } from '@univerjs/sheets-data-validation';
   import { UniverSheetsDrawingUIPlugin } from '@univerjs/sheets-drawing-ui';
   import { UniverSheetsZenEditorPlugin } from '@univerjs/sheets-zen-editor';
   import { UniverSheetsSortPlugin } from '@univerjs/sheets-sort';
   import { UniverSheetsSortUIPlugin } from '@univerjs/sheets-sort-ui';
   import { UniverDocsDrawingUIPlugin } from '@univerjs/docs-drawing-ui';
-  import { UniverDocsThreadCommentUIPlugin } from '@univerjs/docs-thread-comment-ui';
   // import { UniverDocsMentionUIPlugin } from '@univerjs/docs-mention-ui';
   import { UniverSlidesPlugin } from '@univerjs/slides';
   import { UniverSlidesUIPlugin } from '@univerjs/slides-ui';
@@ -119,7 +121,6 @@
         SheetsUIEnUS,
         UIEnUS,
         ThreadCommentUIEnUS,
-        SheetsThreadCommentEnUS,
         ThreadCommentUIEnUS,
       ),
     },
@@ -147,29 +148,6 @@
         },
       },
     });
-
-    univer.registerPlugin(UniverSheetsPlugin, {
-        notExecuteFormula: true,
-    });
-    univer.registerPlugin(UniverSheetsUIPlugin);
-    univer.registerPlugin(UniverSheetsNumfmtPlugin);
-    univer.registerPlugin(UniverSheetsZenEditorPlugin);
-    univer.registerPlugin(UniverFormulaEnginePlugin, {
-        notExecuteFormula: true,
-    });
-    univer.registerPlugin(UniverSheetsFormulaPlugin);
-    univer.registerPlugin(UniverRPCMainThreadPlugin, {
-        workerURL: './worker.js',
-    } as IUniverRPCMainThreadConfig);
-    univer.registerPlugin(UniverSheetsHyperLinkUIPlugin);
-    univer.registerPlugin(UniverSheetsDataValidationPlugin);
-    univer.registerPlugin(UniverSheetsSortPlugin);
-    univer.registerPlugin(UniverSheetsSortUIPlugin);
-    univer.registerPlugin(UniverSheetsConditionalFormattingUIPlugin);
-    // univer.registerPlugin(UniverDocsDrawingUIPlugin);
-    univer.registerPlugin(UniverSlidesPlugin);
-    univer.registerPlugin(UniverSlidesUIPlugin);
-    univer.registerPlugin(UniverSheetsDrawingUIPlugin);
   }
   // ================== Register Plugins Ends ==================
 
@@ -242,11 +220,8 @@
   univer.registerPlugin(UniverDocsThreadCommentUIPlugin);
   // univer.registerPlugin(UniverDocsMentionUIPlugin);
 
-  univer.registerPlugin(UniverSheetsThreadCommentBasePlugin);
-  univer.registerPlugin(UniverSheetsThreadCommentPlugin)
-
   univer.registerPlugin(UniverThreadCommentUIPlugin, {
-      overrides: [[IThreadCommentMentionDataService, { useClass: CustomMentionDataService }]],
+      // overrides: [[IThreadCommentMentionDataService, { useClass: CustomMentionDataService }]],
   });
 
   function removeSymbolFields(obj) {
@@ -306,81 +281,41 @@
       }
     }, 0);
 
-  const updateSheet = async () => {
-    // await delay(100)
-    console.log("updating sheet", currentUniverEditable.save())
-    // const activeSheet = funiver.getActiveWorkbook().getActiveSheet();
-    const activeSheet = univerAPI.getActiveWorkbook().getActiveSheet();
-    // console.log("SNAPSHOT", univerAPI.getActiveWorkbook().getSnapshot());
-    const spreadsheet = $synState.spreadsheet.sheets
-    // console.log("spreadsheet", spreadsheet)
-    const localState = currentUniverEditable.save().sheets;
-    // const localState = univerAPI.getActiveWorkbook().getSnapshot().sheets;
-    console.log("localState", localState)
-    let changed = false;
-
-    // for each sheet in spreadsheet
-    for (const sheet in spreadsheet) {
-      let fullRange = activeSheet.getRange(1, 1, 100, 100);
-      let compromiseValue = {...localState[sheet].cellData}
-      for (const row in spreadsheet[sheet].cellData) {
-        if (compromiseValue[row] === undefined) { compromiseValue[row] = {} }
-        for (const col in spreadsheet[sheet].cellData[row]) {
-          if (compromiseValue[row][col] === undefined) {
-            compromiseValue[row][col] = {}
-          }
-          const previousValue = compromiseValue[row][col]
-          const newValue = spreadsheet[sheet].cellData[row][col]
-          if (!isEqual(previousValue, newValue)) {
-            // let microRange = activeSheet.getRange(row, col, 1, 1);
-            // microRange.setValue(newValue)
-            compromiseValue[row][col] = newValue
-            changed = true;
-          }
-        }
-      }
-
-      if (changed) {
-        fullRange.setValues(compromiseValue);
-      }
-    }
-  }
-
-  function checkKey(e: any) {
-    if ($synState.type == "spreadsheet") {
-      if (["Enter", 
-        "Tab", 
-        "ArrowUp", 
-        "ArrowDown", 
-        "ArrowLeft", 
-        "ArrowRight", 
-        "Backspace", 
-        "Delete",
-        "Escape", 
-        "Home", 
-        "End", 
-        "PageUp", 
-        "PageDown"
-      ].includes(e.key) && !e.shiftKey) { 
-        debouncedMaybeSave()
-       }
-    } else if ($synState.type == "document") {
-      // all typing keys
-      const nonModifyingKeys = [
-        "F1", "F2", "F3", "F4", "F5", "F6", 
-        "F7", "F8", "F9", "F10", "F11", "F12",
-        "Shift", "Control", "Alt", "Meta",
-        "CapsLock", "NumLock", "ScrollLock",
-        "Pause", "Insert", "PrintScreen",
-        "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
-      ];
-      if (!nonModifyingKeys.includes(e.key) && !e.shiftKey) {
-        debouncedMaybeSave()
-      }
-    }
-    //   e.preventDefault();
-    //   open = false;
-  }
+  // function checkKey(e: any) {
+  //   if ($synState.type == "spreadsheet") {
+  //     if (["Enter", 
+  //       "Tab", 
+  //       "ArrowUp", 
+  //       "ArrowDown", 
+  //       "ArrowLeft", 
+  //       "ArrowRight", 
+  //       "Backspace", 
+  //       "Delete",
+  //       "Escape", 
+  //       "Home", 
+  //       "End", 
+  //       "PageUp", 
+  //       "PageDown"
+  //     ].includes(e.key) && !e.shiftKey) { 
+  //       debouncedMaybeSave()
+  //      }
+  //   } else if ($synState.type == "document") {
+  //     // all typing keys
+  //     const nonModifyingKeys = [
+  //       "F1", "F2", "F3", "F4", "F5", "F6", 
+  //       "F7", "F8", "F9", "F10", "F11", "F12",
+  //       "Shift", "Control", "Alt", "Meta",
+  //       "CapsLock", "NumLock", "ScrollLock",
+  //       "Pause", "Insert", "PrintScreen",
+  //       "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+  //     ];
+  //     if (!nonModifyingKeys.includes(e.key) && !e.shiftKey) {
+  //       debouncedMaybeSave()
+  //     }
+  //   }
+  //   //   e.preventDefault();
+  //   //   open = false;
+  // }
 
   // Debounce function
   function debounce(func, wait) {
@@ -394,18 +329,6 @@
       timeout = setTimeout(later, wait);
     };
   }
-
-  const saveSheet = async () => {
-    const sheetData = currentUniverEditable.save();
-    const sheetData2 = univerAPI.getActiveWorkbook().getSnapshot();
-    sheetData.resources = sheetData2.resources
-    let changes: BoardDelta[] = [{
-      type: "set-spreadsheet",
-      spreadsheet: sheetData
-    }]
-    activeBoard.requestChanges(changes)
-    // previousState = {...cloneDeep($synState)}
-}
 
   const closeBoard = async () => {
     await store.closeActiveBoard(false);
@@ -437,33 +360,33 @@
   }
 
   async function hackRefresh() {
-    const unitId = currentUniverEditable.getUnitId()
+    // const unitId = currentUniverEditable.getUnitId()
 
-    let emptySpaceCommand = {
-        "id": "doc.mutation.rich-text-editing",
-        "type": 2,
-        "params": {
-            "unitId": unitId,
-            "actions": [
-                "body",
-                {
-                    "et": "text-x",
-                    "e": [
-                        {
-                            "t": "r",
-                            "len": 0,
-                            "segmentId": ""
-                        }
-                    ]
-                }
-            ],
-            "debounce": true,
-            "trigger": "doc.command.insert-text"
-        }
-    }
+    // let emptySpaceCommand = {
+    //     "id": "doc.mutation.rich-text-editing",
+    //     "type": 2,
+    //     "params": {
+    //         "unitId": unitId,
+    //         "actions": [
+    //             "body",
+    //             {
+    //                 "et": "text-x",
+    //                 "e": [
+    //                     {
+    //                         "t": "r",
+    //                         "len": 0,
+    //                         "segmentId": ""
+    //                     }
+    //                 ]
+    //             }
+    //         ],
+    //         "debounce": true,
+    //         "trigger": "doc.command.insert-text"
+    //     }
+    // }
 
-    await univerAPI.executeCommand(emptySpaceCommand.id, emptySpaceCommand.params, {"fromCollab": true})
-    setCursors()
+    // await univerAPI.executeCommand(emptySpaceCommand.id, emptySpaceCommand.params, {"fromCollab": true})
+    // setCursors()
 
   }
 
@@ -638,7 +561,7 @@
   async function applyCommands(preOps) {
     try {
 
-      // console.log("clerksNewOperations", preOps)
+      console.log("clerksNewOperations", preOps)
 
       safeToType = false
 
@@ -756,8 +679,11 @@
         activeBoard.requestChanges([{type: 'set-spreadsheet', spreadsheet: removeSymbolFields(newSynState)}])
       }
 
+      console.log("allSelections", allSelections)
+
       hackRefresh()
       safeToTypeAgain()
+      console.log("allTransformedOps", allTransformedOps)
     } catch(e) {
       console.log(e)
       safeToTypeAgain()
@@ -809,7 +735,6 @@
           SheetsUIEnUS,
           UIEnUS,
           ThreadCommentUIEnUS,
-          SheetsThreadCommentEnUS,
           ThreadCommentUIEnUS,
         ),
       },
@@ -943,16 +868,11 @@
       activeBoard.requestChanges([{type: 'add-user', user: mockUser}])
     }
 
-    if ($synState.type === "spreadsheet") {
-      currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_SHEET, $synState.spreadsheet);
-    } else if ($synState.type === "document") {
-      currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_DOC, workingFromState.spreadsheet);
-      // activeBoard.session._chronicle.set([]);
-      await debouncedApplyCommandBatch()
-      userManagerService.setCurrentUser(mockUser);
-    } else {
-      currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_SLIDE, $synState.spreadsheet);
-    }
+    currentUniverEditable = univer.createUnit(UniverInstanceType.UNIVER_DOC, workingFromState.spreadsheet);
+    console.log("currentUniverEditable", currentUniverEditable)
+    // activeBoard.session._chronicle.set([]);
+    await debouncedApplyCommandBatch()
+    userManagerService.setCurrentUser(mockUser);
 
     // Apply all commands
     applyCommands($chronicle)
@@ -964,12 +884,12 @@
 
     lastReceivedState = cloneDeep($synState)
 
-    if ($synState.type == "spreadsheet") {
-      window.addEventListener("keydown", checkKey);
-      window.addEventListener("click", checkKey);
-    } else if ($synState.type == "document") {
-      window.addEventListener("keydown", checkKey);
-    }
+    // if ($synState.type == "spreadsheet") {
+    //   window.addEventListener("keydown", checkKey);
+    //   window.addEventListener("click", checkKey);
+    // } else if ($synState.type == "document") {
+    //   window.addEventListener("keydown", checkKey);
+    // }
 
     // SET CURSORS
     participants.forEach(userHash => {
@@ -1146,27 +1066,28 @@
 
   onMount(async () => {
     await registerPlugins();
+    loading = false
     await openPage();
 
-    const unsub = activeBoard.session.synClient.onSignal(synSignal => {
-      if (synSignal.type !== 'SessionMessage') return;
-      // if (isEqual(synSignal.provenance, activeBoard.session.myPubKey)) return;
+    // const unsub = activeBoard.session.synClient.onSignal(synSignal => {
+    //   if (synSignal.type !== 'SessionMessage') return;
+    //   // if (isEqual(synSignal.provenance, activeBoard.session.myPubKey)) return;
 
-      const message: SessionMessage = synSignal.message;
-      if (
-        message &&
-        isEqual(message.workspace_hash, activeBoard.workspace.workspaceHash)
-      ) {
-        if (message.payload.type === 'NewOperationsBroadcast') {
-          // console.log("New Operations Broadcast", message.payload.operations.map(c => decode(c) as any))
-          if (message.payload.operations.length > 0 && toCommit.length == 0 && !timeToRetrieve) {
-            const decodedOps = message.payload.operations.map(c => decode(c) as any)
-            applyCommands(decodedOps)
-          }
-        }
-      }
-    });
-    unsubs.push(unsub)
+    //   const message: SessionMessage = synSignal.message;
+    //   if (
+    //     message &&
+    //     isEqual(message.workspace_hash, activeBoard.workspace.workspaceHash)
+    //   ) {
+    //     if (message.payload.type === 'NewOperationsBroadcast') {
+    //       // console.log("New Operations Broadcast", message.payload.operations.map(c => decode(c) as any))
+    //       if (message.payload.operations.length > 0 && toCommit.length == 0 && !timeToRetrieve) {
+    //         const decodedOps = message.payload.operations.map(c => decode(c) as any)
+    //         applyCommands(decodedOps)
+    //       }
+    //     }
+    //   }
+    // });
+    // unsubs.push(unsub)
 
     // return () => {
     //   window.removeEventListener("click", checkKey);

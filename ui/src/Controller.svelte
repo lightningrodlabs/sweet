@@ -10,6 +10,7 @@
     import BoardMenu from "./BoardMenu.svelte";
     import type { WeaveClient } from '@lightningrodlabs/we-applet';
     import { get } from 'svelte/store';
+    import DocumentPane from './DocumentPane.svelte';
 
     export let roleName = ""
     export let client : AppClient
@@ -95,7 +96,8 @@
                     {#if $boardData.value.latestState.type === "spreadsheet"}
                       <CalcySpreadsheetPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/>
                     {:else if $boardData.value.latestState.type === "document"}
-                      <CalcyPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/>
+                      <!-- <CalcyPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/> -->
+                       <DocumentPane activeBoard={$activeBoard} />
                     {/if}
                   {/if}
                 {/if}

@@ -6,41 +6,18 @@ import { OTSynStore, OTWorkspaceStore } from "@leosprograms/syn-core";
 import type { ProfilesStore } from "@holochain-open-dev/profiles";
 import { cloneDeep } from "lodash";
 import { Board, type BoardDelta, type BoardState } from "./board";
-import { hashEqual } from "./util";
+import { hashEqual, convertPureStringToUDM } from "./util";
 
+import { LocaleType, DocumentFlavor, LogLevel, Univer, UniverInstanceType, UserManagerService , Tools } from '@univerjs/core';
+import { UniverRenderEnginePlugin, ptToPixel } from '@univerjs/engine-render'
 
-import { LocaleType, LogLevel, Univer, UniverInstanceType, UserManagerService , Tools } from '@univerjs/core';
-
-import ThreadCommentUIEnUS from '@univerjs/thread-comment-ui/locale/en-US';
-import SheetsThreadCommentEnUS from '@univerjs/sheets-thread-comment/locale/en-US';
-
-import DesignEnUS from '@univerjs/design/locale/en-US';
-import DocsUIEnUS from '@univerjs/docs-ui/locale/en-US';
-import SheetsEnUS from '@univerjs/sheets/locale/en-US';
-import SheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US';
-import UIEnUS from '@univerjs/ui/locale/en-US';
-
-import { defaultTheme } from "@univerjs/design";
-import { UniverDocsPlugin } from "@univerjs/docs";
-import { UniverFormulaEnginePlugin } from "@univerjs/engine-formula";
-import { UniverRenderEnginePlugin } from "@univerjs/engine-render";
-import { UniverSheetsPlugin } from "@univerjs/sheets";
-import { UniverSheetsFormulaPlugin } from "@univerjs/sheets-formula";
-import { UniverSheetsUIPlugin } from "@univerjs/sheets-ui";
-import { UniverUIPlugin } from "@univerjs/ui";
-
-import { UniverExchangeClientPlugin } from '@univerjs-pro/exchange-client';
-import { UniverSheetsExchangeClientPlugin } from '@univerjs-pro/sheets-exchange-client';
-
-import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
-// import { UniverDebuggerPlugin } from '@univerjs/debugger';
-// import { UniverDocsDrawingUIPlugin } from '@univerjs/docs-drawing-ui';
-
-import { IThreadCommentMentionDataService, UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
-import { UniverSheetsThreadCommentPlugin } from '@univerjs/sheets-thread-comment';
-
-import { UniverSlidesPlugin } from '@univerjs/slides';
-import { UniverSlidesUIPlugin } from '@univerjs/slides-ui';
+// import { UniverDocsPlugin } from "@univerjs/docs";
+// import { UniverFormulaEnginePlugin } from "@univerjs/engine-formula";
+// import { UniverRenderEnginePlugin } from "@univerjs/engine-render";
+// import { UniverSheetsPlugin } from "@univerjs/sheets";
+// import { UniverSheetsFormulaPlugin } from "@univerjs/sheets-formula";
+// import { UniverSlidesPlugin } from '@univerjs/slides';
+// import { UniverSlidesUIPlugin } from '@univerjs/slides-ui';
 
 export enum BoardType {
     active = "active",
@@ -229,18 +206,18 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         // let univer;
 
         const univer = new Univer({
-            theme: defaultTheme,
+            // theme: defaultTheme,
             locale: LocaleType.EN_US,
             locales: {
-            [LocaleType.EN_US]: Tools.deepMerge(
-                DesignEnUS,
-                DocsUIEnUS,
-                SheetsEnUS,
-                SheetsUIEnUS,
-                UIEnUS,
-                ThreadCommentUIEnUS,
-                SheetsThreadCommentEnUS,
-            ),
+            // [LocaleType.EN_US]: Tools.deepMerge(
+            //     DesignEnUS,
+            //     DocsUIEnUS,
+            //     SheetsEnUS,
+            //     SheetsUIEnUS,
+            //     UIEnUS,
+            //     ThreadCommentUIEnUS,
+            //     SheetsThreadCommentEnUS,
+            // ),
             },
         });
         
@@ -256,8 +233,8 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         // });
 
         // core plugins
-        univer.registerPlugin(UniverRenderEnginePlugin);
-        univer.registerPlugin(UniverFormulaEnginePlugin);
+        // univer.registerPlugin(UniverRenderEnginePlugin);
+        // univer.registerPlugin(UniverFormulaEnginePlugin);
         // univer.registerPlugin(UniverDebuggerPlugin);
         // univer.registerPlugin(UniverUIPlugin, {
         //     container: 'app',
@@ -273,31 +250,61 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         //     },
         // });
 
-        // core plugins
-        univer.registerPlugin(UniverUIPlugin, {
-            container: "spreadsheet",
-            header: true,
-            toolbar: true,
-            footer: true,
-        });
+        // // core plugins
+        // univer.registerPlugin(UniverUIPlugin, {
+        //     container: "spreadsheet",
+        //     header: true,
+        //     toolbar: true,
+        //     footer: true,
+        // });
     
-        // doc plugins
-        univer.registerPlugin(UniverDocsPlugin, {
-            hasScroll: false,
-        });
+        // // doc plugins
+        // univer.registerPlugin(UniverDocsPlugin, {
+        //     hasScroll: false,
+        // });
     
         // sheet plugins
-        univer.registerPlugin(UniverSheetsPlugin);
-        univer.registerPlugin(UniverSheetsUIPlugin);
-        univer.registerPlugin(UniverSheetsFormulaPlugin);
-        univer.registerPlugin(UniverSlidesPlugin);
-        univer.registerPlugin(UniverSlidesUIPlugin);
+        // univer.registerPlugin(UniverSheetsPlugin);
+        // univer.registerPlugin(UniverSheetsUIPlugin);
+        // univer.registerPlugin(UniverSheetsFormulaPlugin);
+        // univer.registerPlugin(UniverSlidesPlugin);
+        // univer.registerPlugin(UniverSlidesUIPlugin);
         
         if (options.type == "spreadsheet") {
             const newSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {});
             options.spreadsheet = newSheet.save()
         } else if (options.type == "document") {
-            let newDoc = univer.createUnit(UniverInstanceType.UNIVER_DOC, {});
+            let newDoc = univer.createUnit(UniverInstanceType.UNIVER_DOC, {
+                    body: convertPureStringToUDM(''),
+                    drawings: {},
+                    drawingsOrder: [],
+                    headers: {},
+                    footers: {},
+                    tableSource: {},
+                    documentStyle: {
+                      documentFlavor: DocumentFlavor.TRADITIONAL, // enable header and footer
+                      pageSize: {
+                        width: ptToPixel(595),
+                        height: ptToPixel(842),
+                      },
+                      marginTop: ptToPixel(50),
+                      marginBottom: ptToPixel(50),
+                      marginRight: ptToPixel(40),
+                      marginLeft: ptToPixel(40),
+                      renderConfig: {
+                        vertexAngle: 0,
+                        centerAngle: 0,
+                      },
+                      defaultHeaderId: '',
+                      defaultFooterId: '',
+                      evenPageHeaderId: '',
+                      evenPageFooterId: '',
+                      firstPageHeaderId: '',
+                      firstPageFooterId: '',
+                    },
+                  }
+            );
+            console.log("NEW DOC", newDoc, newDoc.snapshot)
             if (!options.spreadsheet) {
                 options.spreadsheet = newDoc.snapshot
             }

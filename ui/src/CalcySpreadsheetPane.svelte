@@ -28,7 +28,7 @@
     import "@univerjs/design/lib/index.css";
     import "@univerjs/ui/lib/index.css";
     import "@univerjs/sheets-ui/lib/index.css";
-    import "@univerjs/sheets-numfmt/lib/index.css";
+    // import "@univerjs/sheets-numfmt/lib/index.css";
 
     import { LocaleType, LogLevel, ILogService, LocaleService, Univer, UniverInstanceType, type JSONXActions, type ICommand, TextXActionType, TextX, JSONX, ICommandService, CommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
     import { defaultTheme } from "@univerjs/design";
@@ -45,12 +45,12 @@
   import { UniverSheetsThreadCommentPlugin } from '@univerjs/sheets-thread-comment';
   // import { UniverDebuggerPlugin } from '@univerjs/debugger';
   import { UniverSheetsHyperLinkUIPlugin } from '@univerjs/sheets-hyper-link-ui';
-  import { IThreadCommentMentionDataService, UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
+  // import { IThreadCommentMentionDataService, UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
   import { UniverThreadCommentPlugin } from '@univerjs/thread-comment';
-  import { UniverSheetsThreadCommentBasePlugin } from '@univerjs/sheets-thread-comment-base';
+  // import { UniverSheetsThreadCommentBasePlugin } from '@univerjs/sheets-thread-comment-base';
   import type { IUniverRPCMainThreadConfig } from '@univerjs/rpc';
   import { UniverRPCMainThreadPlugin } from '@univerjs/rpc';
-  import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt';
+  // import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt';
   import { UniverSheetsDataValidationPlugin } from '@univerjs/sheets-data-validation';
   import { UniverSheetsDrawingUIPlugin } from '@univerjs/sheets-drawing-ui';
   import { UniverSheetsZenEditorPlugin } from '@univerjs/sheets-zen-editor';
@@ -59,8 +59,8 @@
   import { UniverDocsDrawingUIPlugin } from '@univerjs/docs-drawing-ui';
   import { UniverDocsThreadCommentUIPlugin } from '@univerjs/docs-thread-comment-ui';
 
-  import ThreadCommentUIEnUS from '@univerjs/thread-comment-ui/locale/en-US';
-  import SheetsThreadCommentEnUS from '@univerjs/sheets-thread-comment/locale/en-US';
+  // import ThreadCommentUIEnUS from '@univerjs/thread-comment-ui/locale/en-US';
+  // import SheetsThreadCommentEnUS from '@univerjs/sheets-thread-comment/locale/en-US';
   import DesignEnUS from '@univerjs/design/locale/en-US';
   import DocsUIEnUS from '@univerjs/docs-ui/locale/en-US';
   import SheetsEnUS from '@univerjs/sheets/locale/en-US';
