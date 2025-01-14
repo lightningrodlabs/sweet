@@ -7,7 +7,12 @@
     import { cloneDeep, isEqual } from "lodash";
     import { decodeHashFromBase64, encodeHashToBase64, type Timestamp, type Link } from "@holochain/client";
     import { SynClient, stateFromCommitOT, type Commit, type SessionMessage } from "@leosprograms/syn-core";
-    import type { WAL } from "@lightningrodlabs/we-applet";
+    import {
+      WeaveClient,
+      isWeaveContext,
+      initializeHotReload,
+      type WAL,
+    } from "@theweave/api";
     import { LocaleType, LogLevel, ILogService, LocaleService, Univer, UniverInstanceType, type JSONXActions, type ICommand, TextXActionType, TextX, 
             JSONX, ICommandService, CommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
     import type { Doc, JSONOp, Path } from 'ot-json1';
@@ -57,7 +62,7 @@
 
     async function applyCommands(preOps) {
         try {
-            console.log("clerksNewOperations", preOps)
+            // console.log("clerksNewOperations", preOps)
             
             // ==================UN-APPLY MY OPERATIONS==================
             for (let i = toCommit.length - 1; i >= 0; i--) {
@@ -65,11 +70,8 @@
 
                 const jsonX = JSONX.getInstance();
                 let jsonxOps: JSONOp = extractJSONXFromCommands([c])
-                console.log("jsonxOps", jsonxOps)
                 jsonxOps = JSONX.invertWithDoc(jsonxOps, univerAPI.getActiveDocument().getSnapshot().body)
-                console.log("jsonxOps", jsonxOps)
                 JSONX.apply(univerAPI.getActiveDocument().getSnapshot(), jsonxOps)
-                console.log("unapplied", univerAPI.getActiveDocument().getSnapshot().body)
 
                 if (false) {
                     // console.log("to commit", extractHumanReadableFromCommands([c])[0])
@@ -110,7 +112,6 @@
                 if (unknownOps.length > 0) {
                     // let unknownOps = extractActionsFromCommands(unknownCommands)
                     // let transformedOps = TextX.transform(operations, unknownOps)
-                    console.log('transforming', jsonxOps, unknownCommands)
                     transformedOps = JSONX.transform(jsonxOps, unknownOps, "left")
                 }
 
@@ -125,9 +126,7 @@
                 }
 
                 Object.keys(allSelections).forEach(author => {
-                    console.log("author", author, opAuthor)
                     if (opAuthor == encodeHashToBase64(store.myAgentPubKey)) {
-                        console.log("author 2", author)
                         // const opPos = transformedOps[transformedOps.length - 2]?.len + transformedOps[transformedOps.length - 1]?.len
                         // allSelections[opAuthor] = {
                         //     startOffset: opPos ? opPos : TextX.transformPosition(transformedOps, allSelections[opAuthor].startOffset),
@@ -143,7 +142,7 @@
                             endOffset: JSONX.transformPosition(jsonxOps, allSelections[opAuthor].endOffset, "right")
                         }
 
-                        console.log("transformed selection", allSelections[opAuthor].startOffset)
+                        // console.log("transformed selection", allSelections[opAuthor].startOffset)
 
                         // const injector = univer.__getInjector();
                         // const docSelectionManagerService = injector.get(DocSelectionManagerService);
@@ -319,7 +318,6 @@
                     // console.log("New Operations Broadcast", message.payload.operations.map(c => decode(c) as any))
                     if (message.payload.operations.length > 0 && toCommit.length == 0 && !timeToRetrieve) {
                         const decodedOps = message.payload.operations.map(c => decode(c) as any)
-                        console.log("decodedOps", decodedOps)
                         applyCommands(decodedOps)
                     }
                 }
@@ -449,8 +447,12 @@
     }
 
     const copyWalToPocket = () => {
-        const attachment: WAL = { hrl: [store.dnaHash, activeBoard.hash], context: JSON.stringify({docType: 'document'}) }
-        store.weClient?.walToPocket(attachment)
+        const attachment: WAL = {
+          hrl: [store.dnaHash, activeBoard.hash],
+          context: JSON.stringify({docType: 'document'}),
+        };
+        console.log("attachment", attachment)
+        store.weClient?.assets.assetToPocket(attachment);
     }
 
     const closeBoard = async () => {

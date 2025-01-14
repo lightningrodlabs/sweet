@@ -8,7 +8,7 @@
     import type { OTSynStore } from '@leosprograms/syn-core';
     import type { ProfilesStore } from "@holochain-open-dev/profiles";
     import BoardMenu from "./BoardMenu.svelte";
-    import type { WeaveClient } from '@lightningrodlabs/we-applet';
+    import type { WeaveClient } from "@theweave/api";;
     import { get } from 'svelte/store';
     import DocumentPane from './DocumentPane.svelte';
     import SpreadsheetPane from './SpreadsheetPane.svelte';

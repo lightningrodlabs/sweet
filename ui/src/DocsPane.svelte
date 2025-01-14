@@ -17,7 +17,7 @@
   import AttachmentsDialog from "./AttachmentsDialog.svelte"
   import type { AppClient } from '@holochain/client';
 
-  import type { WAL } from "@lightningrodlabs/we-applet";
+  import type { WAL } from "@theweave/api";;
   import '@lightningrodlabs/we-elements/dist/elements/wal-embed.js';
 
   // import  {Workbook}  from "@fortune-sheet/react";

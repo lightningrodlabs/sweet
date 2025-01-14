@@ -17,7 +17,7 @@
     import AttachmentsDialog from "./AttachmentsDialog.svelte"
     import Participants from "./Participants.svelte";
 
-    import type { WAL } from "@lightningrodlabs/we-applet";
+    import type { WAL } from "@theweave/api";;
     import '@lightningrodlabs/we-elements/dist/elements/wal-embed.js';
   
     // import  {Workbook}  from "@fortune-sheet/react";
@@ -352,8 +352,12 @@
       });
     
     const copyWalToPocket = () => {
-      const attachment: WAL = { hrl: [store.dnaHash, activeBoard.hash], context: JSON.stringify({docType: 'spreadsheet'}) }
-      store.weClient?.walToPocket(attachment)
+      const attachment: WAL = {
+          hrl: [store.dnaHash, activeBoard.hash],
+          context: JSON.stringify({docType: 'spreadsheet'}),
+        };
+        console.log("attachment", attachment)
+        store.weClient?.assets.assetToPocket(attachment);
     }
   
   </script>

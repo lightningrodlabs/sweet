@@ -8,7 +8,7 @@
     import type { AppClient, EntryHash } from '@holochain/client';
     import type { OTSynStore } from '@leosprograms/syn-core';
     import type { ProfilesStore } from "@holochain-open-dev/profiles";
-    import type { WeaveClient } from '@lightningrodlabs/we-applet';
+    import type { WeaveClient } from "@theweave/api";;
     import { onMount } from 'svelte';
 
     export let roleName = ""

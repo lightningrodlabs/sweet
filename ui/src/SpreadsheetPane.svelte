@@ -7,7 +7,7 @@
     import { cloneDeep, isEqual } from "lodash";
     import { decodeHashFromBase64, encodeHashToBase64, type Timestamp, type Link } from "@holochain/client";
     import { SynClient, stateFromCommitOT, type Commit, type SessionMessage } from "@leosprograms/syn-core";
-    import type { WAL } from "@lightningrodlabs/we-applet";
+    import type { WAL } from "@theweave/api";;
     import { LocaleType, LogLevel, ILogService, LocaleService, Univer, UniverInstanceType, type JSONXActions, type ICommand, TextXActionType, TextX, 
             JSONX, ICommandService, CommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
     import type { Doc, JSONOp, Path } from 'ot-json1';

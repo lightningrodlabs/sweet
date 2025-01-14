@@ -5,7 +5,7 @@
   import type { OTSynStore } from '@leosprograms/syn-core';
   import type { ProfilesStore } from "@holochain-open-dev/profiles";
   import BoardMenu from "./BoardMenu.svelte";
-  import type { WeClient } from '@lightningrodlabs/we-applet';
+  import type { WeClient } from "@theweave/api";;
 
   export let roleName = ""
   export let client : AppAgentClient

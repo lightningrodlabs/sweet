@@ -2,7 +2,7 @@
   import "@shoelace-style/shoelace/dist/components/skeleton/skeleton.js";
   import { createEventDispatcher, getContext } from "svelte";
   import type { CalcyStore } from "./store";
-  import { weaveUrlToWAL, type WAL } from "@lightningrodlabs/we-applet";
+  import { weaveUrlToWAL, type WAL } from "@theweave/api";;
   import SvgIcon from "./SvgIcon.svelte";
   import { hrlToString } from "@holochain-open-dev/utils";
   import type { WALUrl } from "./util";
@@ -23,7 +23,7 @@
       class:attachment-item-with-delete={allowDelete}
       class:attachment-item={!allowDelete}
     >
-      {#await store.weClient.assetInfo(wal)}
+      {#await store.weClient.assets.assetInfo(wal)}
         <div style="cursor:pointer; padding: 0 5px 0 5px; border: dashed 1px;margin-right:5px" title={`Resolving WAL: ${hrlToString(wal.hrl)}?${JSON.stringify(wal.context)}`}> ...</div>
       {:then data}
         {#if data}
@@ -33,7 +33,7 @@
                 e.stopPropagation()
                 try {
   //                embedLink = index
-                  await store.weClient.openWal(wal)
+                  await store.weClient.openAsset(wal)
                 } catch(e) {
                   alert(`Error opening link: ${e}`)
                 }

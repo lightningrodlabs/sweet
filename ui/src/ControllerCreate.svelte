@@ -4,7 +4,7 @@
   import type { AppAgentClient } from '@holochain/client';
   import { OTSynStore, SynClient } from '@leosprograms/syn-core';
   import type { ProfilesStore } from "@holochain-open-dev/profiles";
-  import type { WeClient } from '@lightningrodlabs/we-applet';
+  import type { WeClient } from "@theweave/api";;
   import { getMyDna } from './util';
   import { Board } from './board';
   export let roleName = ""

@@ -22,7 +22,7 @@
   import { createEventDispatcher } from "svelte";
   import dmp from 'dmp';
   import Participants from "./Participants.svelte";
-  import type { WAL } from "@lightningrodlabs/we-applet";
+  import type { WAL } from "@theweave/api";;
   import '@lightningrodlabs/we-elements/dist/elements/wal-embed.js';
 
   // import "@univerjs/sheets-numfmt/lib/index.css";
