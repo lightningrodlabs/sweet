@@ -59,7 +59,7 @@
   import { UniverDocsDrawingUIPlugin } from '@univerjs/docs-drawing-ui';
   import { UniverDocsThreadCommentUIPlugin } from '@univerjs/docs-thread-comment-ui';
 
-  // import ThreadCommentUIEnUS from '@univerjs/thread-comment-ui/locale/en-US';
+  import ThreadCommentUIEnUS from '@univerjs/thread-comment-ui/locale/en-US';
   // import SheetsThreadCommentEnUS from '@univerjs/sheets-thread-comment/locale/en-US';
   import DesignEnUS from '@univerjs/design/locale/en-US';
   import DocsUIEnUS from '@univerjs/docs-ui/locale/en-US';
@@ -117,7 +117,7 @@
             SheetsUIEnUS,
             UIEnUS,
             ThreadCommentUIEnUS,
-            SheetsThreadCommentEnUS,
+            // SheetsThreadCommentEnUS,
             ThreadCommentUIEnUS,
         ),
         },
@@ -184,6 +184,7 @@
   
         if (changed) {
           fullRange.setValues(compromiseValue);
+          // replacementRange.setValues(compromiseValue);
         }
       }
     }
@@ -314,7 +315,7 @@
         notExecuteFormula: false,
     });
     univer.registerPlugin(UniverSheetsUIPlugin);
-    univer.registerPlugin(UniverSheetsNumfmtPlugin);
+    // univer.registerPlugin(UniverSheetsNumfmtPlugin);
     univer.registerPlugin(UniverSheetsZenEditorPlugin);
     univer.registerPlugin(UniverFormulaEnginePlugin, {
         notExecuteFormula: false,

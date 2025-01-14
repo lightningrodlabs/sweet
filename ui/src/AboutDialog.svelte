@@ -72,7 +72,7 @@
 </script>
 
 
-<sl-dialog label="Sweet UI v0.10.6 for DNA v0.10.0-dev.1" bind:this={dialog} width={600} >
+<sl-dialog label="Sweet UI v0.10.7 for DNA v0.10.0-dev.2" bind:this={dialog} width={600} >
     <div class="about">
         <p>Sweet is a demonstration Holochain app built by Lightning Rod Labs.</p>
         <p> <b>Developers:</b>

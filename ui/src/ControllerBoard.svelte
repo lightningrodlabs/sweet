@@ -1,6 +1,8 @@
 <script lang="ts">
     import CalcyPane from './CalcyPane.svelte'
     import CalcySpreadsheetPane from './CalcySpreadsheetPane.svelte';
+    import DocumentPane from './DocumentPane.svelte';
+    import SpreadsheetPane from './SpreadsheetPane.svelte';
     import { CalcyStore } from './store'
     import { setContext } from 'svelte';
     import type { AppClient, EntryHash } from '@holochain/client';
@@ -76,9 +78,11 @@
                 {#if resetVar && $boardData.status == "complete"}
                   {#if $boardData.value.latestState.type === "spreadsheet"}
                     <CalcySpreadsheetPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value} tabView={true}/>
+                    <!-- <SpreadsheetPane activeBoard={$activeBoard} participants={$participants.value} profiles={profiles.value} myProfile={$profile.value} tabView={true}/> -->
                   {:else if $boardData.value.latestState.type === "document"}
-                    <CalcyPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value} tabView={true}/>
-                  {/if}                
+                    <!-- <CalcyPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value} tabView={true}/> -->
+                      <DocumentPane activeBoard={$activeBoard} participants={$participants.value} profiles={profiles.value} myProfile={$profile.value} tabView={true}/>
+                    {/if}                
                 {/if}
               {/if}
             {/if}

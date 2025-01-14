@@ -11,6 +11,7 @@
     import type { WeaveClient } from '@lightningrodlabs/we-applet';
     import { get } from 'svelte/store';
     import DocumentPane from './DocumentPane.svelte';
+    import SpreadsheetPane from './SpreadsheetPane.svelte';
 
     export let roleName = ""
     export let client : AppClient
@@ -95,9 +96,10 @@
                 {#if resetVar}
                     {#if $boardData.value.latestState.type === "spreadsheet"}
                       <CalcySpreadsheetPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/>
+                      <!-- <SpreadsheetPane activeBoard={$activeBoard} participants={$participants.value} profiles={profiles.value} myProfile={$profile.value} tabView={true}/> -->
                     {:else if $boardData.value.latestState.type === "document"}
                       <!-- <CalcyPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/> -->
-                       <DocumentPane activeBoard={$activeBoard} />
+                       <DocumentPane activeBoard={$activeBoard} participants={$participants.value} profiles={profiles.value} myProfile={$profile.value}/>
                     {/if}
                   {/if}
                 {/if}

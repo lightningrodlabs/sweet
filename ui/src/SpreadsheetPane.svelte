@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { setupUniverDocs } from "./setup-univer";
+    import { setupUniverDocs, setupUniverSheets } from "./setup-univer";
     import { getContext, onMount, onDestroy } from "svelte";
     import type { CalcyStore } from "./store";
     import { debounce, removeSymbolFields, changeUndefinedToEmptyString, extractActionsFromCommands, extractJSONXFromCommands } from "./util";
@@ -66,19 +66,19 @@
                 const jsonX = JSONX.getInstance();
                 let jsonxOps: JSONOp = extractJSONXFromCommands([c])
                 console.log("jsonxOps", jsonxOps)
-                jsonxOps = JSONX.invertWithDoc(jsonxOps, univerAPI.getActiveDocument().getSnapshot().body)
+                jsonxOps = JSONX.invertWithDoc(jsonxOps, univerAPI.getActiveWorkbook().save().body)
                 console.log("jsonxOps", jsonxOps)
-                JSONX.apply(univerAPI.getActiveDocument().getSnapshot(), jsonxOps)
-                console.log("unapplied", univerAPI.getActiveDocument().getSnapshot().body)
+                JSONX.apply(univerAPI.getActiveWorkbook().save(), jsonxOps)
+                console.log("unapplied", univerAPI.getActiveWorkbook().save().body)
 
                 if (false) {
                     // console.log("to commit", extractHumanReadableFromCommands([c])[0])
                     let operations = extractActionsFromCommands([c])
                     // if (operations.find(op => op.t == "d" || op.t == "r")) {
-                        operations = TextX.makeInvertible(operations, univerAPI.getActiveDocument().getSnapshot().body)
+                        operations = TextX.makeInvertible(operations, univerAPI.getActiveWorkbook().save().body)
                     // }
                     let reversedOps = TextX.invert(operations)
-                    TextX.apply(univerAPI.getActiveDocument().getSnapshot().body, reversedOps)
+                    TextX.apply(univerAPI.getActiveWorkbook().save().body, reversedOps)
                 }
             }
             // ==================UN-APPLY MY OPERATIONS ENDS==================
@@ -118,10 +118,10 @@
                 // let lastRetainPosition = unknownOps[0]?.len ? unknownOps[0].len : 0
                 
                 allTransformedOps = allTransformedOps.concat(transformedOps)
-                // TextX.apply(univerAPI.getActiveDocument().getSnapshot().body
+                // TextX.apply(univerAPI.getActiveWorkbook().save().body
                 // , transformedOps)
                 if (transformedOps.length > 0) {
-                    JSONX.apply(univerAPI.getActiveDocument().getSnapshot(), transformedOps)
+                    JSONX.apply(univerAPI.getActiveWorkbook().save(), transformedOps)
                 }
 
                 Object.keys(allSelections).forEach(author => {
@@ -151,7 +151,7 @@
                     //     console.log("current position", y)
                     //     const transformedRange = [TextX.transformPosition(transformedOps, y[0].startOffset), TextX.transformPosition(transformedOps, y[0].endOffset)]
                     //     console.log("transformed position", transformedRange)
-                        // univerAPI.getActiveDocument()?.setSelection(transformedRange[0], transformedRange[1])
+                        // univerAPI.getActiveWorkbook()?.setSelection(transformedRange[0], transformedRange[1])
                     } else {
                         allSelections[author] = {
                             startOffset: JSONX.transformPosition(jsonxOps, allSelections[author].startOffset, "right"),
@@ -181,7 +181,7 @@
                         // }
                     }
 
-                    univerAPI.getActiveDocument()?.setSelection(allSelections[author].startOffset, allSelections[author].endOffset)
+                    univerAPI.getActiveWorkbook()?.setSelection(allSelections[author].startOffset, allSelections[author].endOffset)
                 })
 
                 chronicleIndex ++
@@ -200,9 +200,8 @@
             if (isEqual($clerk, store.myAgentPubKey)) {
                 const newSynState = {
                     ...$synState.spreadsheet,
-                    body: univerAPI.getActiveDocument().getSnapshot().body
+                    body: univerAPI.getActiveWorkbook().save().body
                 }
-                console.log("saving")
                 activeBoard.requestChanges([{type: 'set-spreadsheet', spreadsheet: removeSymbolFields(newSynState)}])
             }
 
@@ -217,7 +216,7 @@
     }
 
     function paragraphIndex(cursor: number): number | undefined {
-        let paragraphs = univerAPI.getActiveDocument().getSnapshot().body.paragraphs;
+        let paragraphs = univerAPI.getActiveWorkbook().save().body.paragraphs;
         for (let i = 0; i < paragraphs.length; i++) {
             let p = paragraphs[i];
             if (cursor <= p.startIndex) {
@@ -228,7 +227,7 @@
     }
 
     async function hackRefresh() {
-        const unitId = univerAPI.getActiveDocument().id
+        const unitId = univerAPI.getActiveWorkbook().id
 
         let emptySpaceCommand = {
             "id": "doc.mutation.rich-text-editing",
@@ -254,7 +253,7 @@
         }
 
         await univerAPI.executeCommand(emptySpaceCommand.id, emptySpaceCommand.params, {"fromCollab": true})
-        univerAPI.getActiveDocument().setSelection(allSelections[encodeHashToBase64(activeBoard.session.myPubKey)].startOffset, allSelections[encodeHashToBase64(activeBoard.session.myPubKey)].endOffset)
+        univerAPI.getActiveWorkbook().setSelection(allSelections[encodeHashToBase64(activeBoard.session.myPubKey)].startOffset, allSelections[encodeHashToBase64(activeBoard.session.myPubKey)].endOffset)
     }
 
     const debouncedApplyCommandBatch = debounce(async() => {
@@ -268,9 +267,6 @@
     function setupCommandListener() {
         let beforeCommandListener = univerAPI.onBeforeCommandExecute((command, options) => {
             // console.log("beforeCommandListerner", command, options);
-            if (!options?.fromCollab && ["thread-comment.mutation.update-comment", "thread-comment.mutation.add-comment", "thread-comment.mutation.resolve-comment", "docs.command.delete-comment"].includes(command.id)) {
-              activeBoard.requestChanges([{type: 'add-comment', comment: removeSymbolFields(changeUndefinedToEmptyString(command))}])
-            }
 
             if (command.id == "doc.operation.set-selections" && command.params.isEditing == false) {
                 allSelections[encodeHashToBase64(activeBoard.session.myPubKey)] = {
@@ -393,7 +389,7 @@
                 workingFromCommit = latestHash as Uint8Array
                 workingFromState = fullDocument
                 console.log("workingFromCommit 3", workingFromCommit)
-                debouncedApplyCommandBatch()
+                // debouncedApplyCommandBatch()
 
                 allSelections[encodeHashToBase64(activeBoard.session.myPubKey)] = {
                     startOffset: 0,
@@ -430,14 +426,6 @@
         userManagerService.setCurrentUser(localUser);
     }
 
-    async function addSavedComments() {
-      $synState.commentCommands.forEach(comment => {
-        const cleanedComment = removeSymbolFields(changeUndefinedToEmptyString(comment))
-        console.log("comment", cleanedComment)
-        univerAPI.executeCommand(cleanedComment.id, cleanedComment.params, {"fromCollab": true})
-      })
-    }
-
     function startSyncInterval() {
         const applyCommandBatchInterval = setInterval(async() => {
         if ($clerkStatus == "found" && Date.now() - lastTypedTime > 200 && timeToRetrieve) {
@@ -472,15 +460,15 @@
         loading = true
         // setupToolbar(univerAPI)
         await setWorkingFromCommit()
-        const res = await setupUniverDocs(changeUndefinedToEmptyString(removeSymbolFields(workingFromState.spreadsheet)));
+        // const res = await setupUniverDocs();
+        const res = await setupUniverSheets();
         univerAPI = res[0]
         univer = res[1]
-        await setUsers()
+        setUsers()
         loading = false
-        await addSavedComments()
-        setupCommandListener()
-        setupExternalCommandListener()
-        startSyncInterval()
+        // setupCommandListener()
+        // setupExternalCommandListener()
+        // startSyncInterval()
     });
 
     onDestroy( async () => {
@@ -497,121 +485,122 @@
   <div class="board" >
     <EditBoardDialog bind:this={editBoardDialog}></EditBoardDialog>
     <!-- {JSON.stringify($synState.spreadsheet)} -->
-  <div class="top-bar">    <div class="left-items">
-    {#if standAlone}
-        <h2>{$synState.name}</h2>
-    {:else}
-        {#if !tabView}
-          <button  class="board-button close" on:click={closeBoard} title="Close">
-            <SvgIcon icon=faClose size="16px"/>
-          </button>
-        {/if}
-
-        <input
-          type="text"
-          value={$synState.name}
-          on:input={(e) => {
-            activeBoard.requestChanges([{type: 'set-name', name: e.target.value}])
-          }}
-          on:blur={(e) => {
-            activeBoard.requestChanges([{type: 'set-name', name: e.target.value}])
-          }}
-          on:keydown={(e) => {
-            if (e.key === "Enter") {
-              e.target.blur()
-            }
-          }}
-          style="font-size: 16px; font-weight: bold; border: none; background: transparent; color: rgba(86, 92, 108, 1.0);"
-        />
-        <sl-dropdown class="board-options board-menu" skidding=15>
-          <sl-button slot="trigger"   class="board-button settings" caret>&nbsp;</sl-button>
-          <sl-menu className="settings-menu">
-            <sl-menu-item on:click={()=> editBoardDialog.open(cloneDeep(activeBoard.hash))} class="board-settings" >
-                <SvgIcon icon="faCog"  style="background: transparent; opacity: .5; position: relative; top: -2px;" size="14px"/> <span>Settings</span>
-            </sl-menu-item>
-            <sl-menu-item on:click={() => exportBoard($synState)} title="Export" class="board-export" >
-              <SvgIcon icon="faFileExport"  style="background: transparent; opacity: .5; position: relative; top: -2px;" size="14px" /> <span>Export</span>
-            </sl-menu-item>
-            <sl-menu-item on:click={() => {
-              store.archiveBoard(activeBoard.hash)
-              }} title="Archive" class="board-archive" >
-              <SvgIcon icon="faArchive" style="background: transparent; opacity: .5; position: relative; top: -2px;" size="14px" /> <span>Archive</span>
-            </sl-menu-item>
-            <sl-menu-item  on:click={leaveBoard} class="leave-board" >
-                <SvgIcon icon="faArrowTurnDown" style="background: transparent; opacity: .5; position: relative; top: -2px;" size="12px" /> <span>Leave board</span>
-            </sl-menu-item>
-          </sl-menu>
-        </sl-dropdown>
-        {#if store.weClient}
-          <AttachmentsDialog activeBoard={activeBoard} bind:this={attachmentsDialog}></AttachmentsDialog>
-          {#if $synState.boundTo.length>0}
-            <div style="margin-left:10px;display:flex; align-items: center">
-              <span style="margin-right: 5px;">Bound To:</span>
-              <AttachmentsList allowDelete={false} attachments={$synState.boundTo} />
-            </div>
-          {/if}
-          <div style="margin-left:10px; margin-top:2px;display:flex">
-            <button title="Add Board to Pocket" class="attachment-button" style="margin-right:10px" on:click={()=>copyWalToPocket()} >          
-              <SvgIcon icon="addToPocket" size="20px"/>
+    <div class="top-bar">    
+        <div class="left-items">
+        {#if standAlone}
+            <h2>{$synState.name}</h2>
+        {:else}
+            {#if !tabView}
+            <button  class="board-button close" on:click={closeBoard} title="Close">
+                <SvgIcon icon=faClose size="16px"/>
             </button>
-            <button class="attachment-button" style="margin-right:10px" on:click={()=>attachmentsDialog.open(undefined)} >          
-              <SvgIcon icon="link" size="16px"/>
-            </button>
-            {#if $synState.props.attachments}
-              <AttachmentsList attachments={$synState.props.attachments}
-                allowDelete={false}/>
             {/if}
-          </div>
+
+            <input
+            type="text"
+            value={$synState.name}
+            on:input={(e) => {
+                activeBoard.requestChanges([{type: 'set-name', name: e.target.value}])
+            }}
+            on:blur={(e) => {
+                activeBoard.requestChanges([{type: 'set-name', name: e.target.value}])
+            }}
+            on:keydown={(e) => {
+                if (e.key === "Enter") {
+                e.target.blur()
+                }
+            }}
+            style="font-size: 16px; font-weight: bold; border: none; background: transparent; color: rgba(86, 92, 108, 1.0);"
+            />
+            <sl-dropdown class="board-options board-menu" skidding=15>
+            <sl-button slot="trigger"   class="board-button settings" caret>&nbsp;</sl-button>
+            <sl-menu className="settings-menu">
+                <sl-menu-item on:click={()=> editBoardDialog.open(cloneDeep(activeBoard.hash))} class="board-settings" >
+                    <SvgIcon icon="faCog"  style="background: transparent; opacity: .5; position: relative; top: -2px;" size="14px"/> <span>Settings</span>
+                </sl-menu-item>
+                <sl-menu-item on:click={() => exportBoard($synState)} title="Export" class="board-export" >
+                <SvgIcon icon="faFileExport"  style="background: transparent; opacity: .5; position: relative; top: -2px;" size="14px" /> <span>Export</span>
+                </sl-menu-item>
+                <sl-menu-item on:click={() => {
+                store.archiveBoard(activeBoard.hash)
+                }} title="Archive" class="board-archive" >
+                <SvgIcon icon="faArchive" style="background: transparent; opacity: .5; position: relative; top: -2px;" size="14px" /> <span>Archive</span>
+                </sl-menu-item>
+                <sl-menu-item  on:click={leaveBoard} class="leave-board" >
+                    <SvgIcon icon="faArrowTurnDown" style="background: transparent; opacity: .5; position: relative; top: -2px;" size="12px" /> <span>Leave board</span>
+                </sl-menu-item>
+            </sl-menu>
+            </sl-dropdown>
+            {#if store.weClient}
+            <AttachmentsDialog activeBoard={activeBoard} bind:this={attachmentsDialog}></AttachmentsDialog>
+            {#if $synState.boundTo.length>0}
+                <div style="margin-left:10px;display:flex; align-items: center">
+                <span style="margin-right: 5px;">Bound To:</span>
+                <AttachmentsList allowDelete={false} attachments={$synState.boundTo} />
+                </div>
+            {/if}
+            <div style="margin-left:10px; margin-top:2px;display:flex">
+                <button title="Add Board to Pocket" class="attachment-button" style="margin-right:10px" on:click={()=>copyWalToPocket()} >          
+                <SvgIcon icon="addToPocket" size="20px"/>
+                </button>
+                <button class="attachment-button" style="margin-right:10px" on:click={()=>attachmentsDialog.open(undefined)} >          
+                <SvgIcon icon="link" size="16px"/>
+                </button>
+                {#if $synState.props.attachments}
+                <AttachmentsList attachments={$synState.props.attachments}
+                    allowDelete={false}/>
+                {/if}
+            </div>
+            {/if}
+    
         {/if}
-  
-      {/if}
-    </div>
-
-    <div class="right-items">
-      {#if participants}
-        <div class="participants">
-          <div style="display:flex; flex-direction: row">
-            <!-- <button
-              on:click={
-                console.log(univerAPI.getActiveDocument().getBody().dataStream)
-              }
-            >
-              Console
-            </button> -->
-
-            <!-- <button
-              on:click={
-                console.log($chronicle)
-              }
-            >
-              Chronicle
-            </button> -->
-
-            <!-- {JSON.stringify($chronicle.length)} -->
-
-            <div style="margin: 7px; display: flex; flex-direction: row;" title="In order to work together, you must be synced with collaborators">
-              {$clerkStatus == "found" ? "Synced" : "Syncing..."}
-            </div>
-            <div style="display:flex; justify-content:flex-end">
-              <!-- {JSON.stringify($clerk)} -->
-              <Participants board={activeBoard} highlightedAgent={$clerk} max={10}></Participants>
-            </div>
-
-            <!-- <Avatar agentPubKey={store.myAgentPubKey} showNickname={false} size={30} /> -->
-
-            {#each Array.from(participants.entries()) as [agentPubKey, sessionData]}
-              <!-- <div class:idle={Date.now()-sessionData.lastSeen >30000}> -->
-                <Avatar agentPubKey={agentPubKey} showNickname={false} size={30} />
-              <!-- </div> -->
-            {/each}
-
-          </div>
         </div>
-      {/if}
 
+        <div class="right-items">
+        {#if participants}
+            <div class="participants">
+            <div style="display:flex; flex-direction: row">
+                <!-- <button
+                on:click={
+                    console.log(univerAPI.getActiveWorkbook().getBody().dataStream)
+                }
+                >
+                Console
+                </button> -->
+
+                <!-- <button
+                on:click={
+                    console.log($chronicle)
+                }
+                >
+                Chronicle
+                </button> -->
+
+                <!-- {JSON.stringify($chronicle.length)} -->
+
+                <div style="margin: 7px; display: flex; flex-direction: row;" title="In order to work together, you must be synced with collaborators">
+                {$clerkStatus == "found" ? "Synced" : "Syncing..."}
+                </div>
+                <div style="display:flex; justify-content:flex-end">
+                <!-- {JSON.stringify($clerk)} -->
+                <Participants board={activeBoard} highlightedAgent={$clerk} max={10}></Participants>
+                </div>
+
+                <!-- <Avatar agentPubKey={store.myAgentPubKey} showNickname={false} size={30} /> -->
+
+                {#each Array.from(participants.entries()) as [agentPubKey, sessionData]}
+                <!-- <div class:idle={Date.now()-sessionData.lastSeen >30000}> -->
+                    <Avatar agentPubKey={agentPubKey} showNickname={false} size={30} />
+                <!-- </div> -->
+                {/each}
+
+            </div>
+            </div>
+        {/if}
+
+        </div>
     </div>
-  </div>
-</div>
+    </div>
 
     {#if loading}
     <div style="display: flex; justify-content: center; align-items: center; height: 100vh; width: 100vw;">
