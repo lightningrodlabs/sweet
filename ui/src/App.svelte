@@ -195,7 +195,7 @@
   {/if}
 
 </profiles-context>
-<Sync client={client}/>
+<!-- <Sync client={client}/> -->
 {:else}
 <div class="loading"><div class="loader"></div></div>
 {/if}

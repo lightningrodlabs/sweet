@@ -2,7 +2,7 @@
   import { CalcyStore } from './store'
   import { setContext } from 'svelte';
   import type { AppAgentClient } from '@holochain/client';
-  import type { OTSynStore } from '@holochain-syn/core';
+  import type { SynStore } from '@holochain-syn/core';
   import type { ProfilesStore } from "@holochain-open-dev/profiles";
   import BoardMenu from "./BoardMenu.svelte";
   import type { WeClient } from "@theweave/api";;
@@ -18,7 +18,7 @@
     client,
     roleName,
   );
-  let synStore: OTSynStore = store.synStore
+  let synStore: SynStore = store.synStore
 
   setContext('synStore', {
     getStore: () => synStore,

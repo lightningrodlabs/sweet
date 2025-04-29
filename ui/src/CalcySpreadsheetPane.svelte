@@ -1,160 +1,110 @@
 <script lang="ts">
-    import { getContext, onMount } from "svelte";
-    import type { CalcyStore } from "./store";
-    import { v1 as uuidv1 } from "uuid";
-    import type {  Board, BoardDelta, BoardProps } from "./board";
-    import EditBoardDialog from "./shared/EditBoardDialog.svelte";
-    import Avatar from "./shared/Avatar.svelte";
-    import { decodeHashFromBase64, type Timestamp } from "@holochain/client";
-    import { cloneDeep, isEqual } from "lodash";
-    import '@shoelace-style/shoelace/dist/components/dropdown/dropdown.js';
-    import '@shoelace-style/shoelace/dist/components/textarea/textarea.js';
-    import ClickEdit from "./ClickEdit.svelte";
-    import { onVisible } from "./util";
-    import SvgIcon from "./shared/SvgIcon.svelte";
-    import { exportBoard } from "./export";
-    import AttachmentsList from './shared/AttachmentsList.svelte';
-    import AttachmentsDialog from "./shared/AttachmentsDialog.svelte"
-    import Participants from "./shared/Participants.svelte";
+  import { getContext, onMount } from "svelte";
+  import type { CalcyStore } from "./store";
+  import { v1 as uuidv1 } from "uuid";
+  import type {  Board, BoardDelta, BoardProps } from "./board";
+  import EditBoardDialog from "./shared/EditBoardDialog.svelte";
+  import Avatar from "./shared/Avatar.svelte";
+  import { decodeHashFromBase64, type Timestamp } from "@holochain/client";
+  import { cloneDeep, isEqual } from "lodash";
+  import '@shoelace-style/shoelace/dist/components/dropdown/dropdown.js';
+  import '@shoelace-style/shoelace/dist/components/textarea/textarea.js';
+  import ClickEdit from "./ClickEdit.svelte";
+  import SvgIcon from "./shared/SvgIcon.svelte";
+  import { exportBoard } from "./export";
+  import AttachmentsList from './shared/AttachmentsList.svelte';
+  import AttachmentsDialog from "./shared/AttachmentsDialog.svelte"
+  import Participants from "./shared/Participants.svelte";
+  import { deepEqual } from "fast-equals";
+  import { debounce, removeSymbolFields, changeUndefinedToEmptyString, extractActionsFromCommands, extractJSONXFromCommands } from "./util";
 
-    import type { WAL } from "@theweave/api";;
-    // import '@lightningrodlabs/we-elements/dist/elements/wal-embed.js';
-  
-    // import  {Workbook}  from "@fortune-sheet/react";
-    // import ReactAdapter from "./ReactAdapter.svelte";
-    // import "@fortune-sheet/react/dist/index.css"
-    import type { IWorkbookData } from '@univerjs/core';
-  
-    import "@univerjs/design/lib/index.css";
-    import "@univerjs/ui/lib/index.css";
-    import "@univerjs/sheets-ui/lib/index.css";
-    // import "@univerjs/sheets-numfmt/lib/index.css";
+  import type { WAL } from "@theweave/api";;
+  import type { IWorkbookData } from '@univerjs/core';
 
-    import { LocaleType, LogLevel, ILogService, LocaleService, Univer, UniverInstanceType, type JSONXActions, type ICommand, TextXActionType, TextX, JSONX, ICommandService, CommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
-    import { defaultTheme } from "@univerjs/design";
-    import { UniverDocsPlugin } from "@univerjs/docs";
-    import { UniverDocsUIPlugin } from "@univerjs/docs-ui";
-    import { UniverFormulaEnginePlugin } from "@univerjs/engine-formula";
-    import { UniverRenderEnginePlugin } from "@univerjs/engine-render";
-    import { UniverSheetsPlugin } from "@univerjs/sheets";
-    import { UniverSheetsFormulaPlugin } from "@univerjs/sheets-formula";
-    import { UniverSheetsUIPlugin } from "@univerjs/sheets-ui";
-    import { UniverUIPlugin } from "@univerjs/ui";
+  import "@univerjs/design/lib/index.css";
+  import "@univerjs/ui/lib/index.css";
+  import "@univerjs/sheets-ui/lib/index.css";
 
-    import { UniverSheetsConditionalFormattingUIPlugin } from '@univerjs/sheets-conditional-formatting-ui';
-  import { UniverSheetsThreadCommentPlugin } from '@univerjs/sheets-thread-comment';
-  // import { UniverDebuggerPlugin } from '@univerjs/debugger';
-  import { UniverSheetsHyperLinkUIPlugin } from '@univerjs/sheets-hyper-link-ui';
-  // import { IThreadCommentMentionDataService, UniverThreadCommentUIPlugin } from '@univerjs/thread-comment-ui';
-  import { UniverThreadCommentPlugin } from '@univerjs/thread-comment';
-  // import { UniverSheetsThreadCommentBasePlugin } from '@univerjs/sheets-thread-comment-base';
-  import type { IUniverRPCMainThreadConfig } from '@univerjs/rpc';
-  import { UniverRPCMainThreadPlugin } from '@univerjs/rpc';
-  // import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt';
-  import { UniverSheetsDataValidationPlugin } from '@univerjs/sheets-data-validation';
-  import { UniverSheetsDrawingUIPlugin } from '@univerjs/sheets-drawing-ui';
-  import { UniverSheetsZenEditorPlugin } from '@univerjs/sheets-zen-editor';
-  import { UniverSheetsSortPlugin } from '@univerjs/sheets-sort';
-  import { UniverSheetsSortUIPlugin } from '@univerjs/sheets-sort-ui';
-  import { UniverDocsDrawingUIPlugin } from '@univerjs/docs-drawing-ui';
-  import { UniverDocsThreadCommentUIPlugin } from '@univerjs/docs-thread-comment-ui';
+import { LogLevel, ILogService, LocaleService, Univer, UniverInstanceType, type JSONXActions, type ICommand, TextXActionType, TextX, JSONX, ICommandService, CommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
 
-  import ThreadCommentUIEnUS from '@univerjs/thread-comment-ui/locale/en-US';
-  // import SheetsThreadCommentEnUS from '@univerjs/sheets-thread-comment/locale/en-US';
-  import DesignEnUS from '@univerjs/design/locale/en-US';
-  import DocsUIEnUS from '@univerjs/docs-ui/locale/en-US';
-  import SheetsEnUS from '@univerjs/sheets/locale/en-US';
-  import SheetsUIEnUS from '@univerjs/sheets-ui/locale/en-US';
-  import UIEnUS from '@univerjs/ui/locale/en-US';
+import { createUniver, defaultTheme, LocaleType, merge } from '@univerjs/presets'
+
+import { UniverSheetsCorePreset } from '@univerjs/presets/preset-sheets-core'
+import sheetsCoreEnUS from '@univerjs/presets/preset-sheets-core/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-core.css'
+
+import { UniverSheetsConditionalFormattingPreset } from '@univerjs/presets/preset-sheets-conditional-formatting'
+import sheetsConditionalFormattingEnUS from '@univerjs/presets/preset-sheets-conditional-formatting/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-conditional-formatting.css'
+
+import { UniverSheetsDataValidationPreset } from '@univerjs/presets/preset-sheets-data-validation'
+import sheetsDataValidationEnUS from '@univerjs/presets/preset-sheets-data-validation/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-data-validation.css'
+
+import { UniverSheetsDrawingPreset } from '@univerjs/presets/preset-sheets-drawing'
+import sheetsDrawingEnUS from '@univerjs/presets/preset-sheets-drawing/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-drawing.css'
+
+import { UniverSheetsFilterPreset } from '@univerjs/presets/preset-sheets-filter'
+import sheetsFilterEnUS from '@univerjs/presets/preset-sheets-filter/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-filter.css'
+
+import { UniverSheetsHyperLinkPreset } from '@univerjs/presets/preset-sheets-hyper-link'
+import sheetsHyperLinkEnUS from '@univerjs/presets/preset-sheets-hyper-link/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
 
 
-  import { UniverSheetsConditionalFormattingPlugin } from '@univerjs/sheets-conditional-formatting';
-  import { UniverSheetsFilterPlugin } from '@univerjs/sheets-filter';
-  import { UniverSheetsFormulaUIPlugin } from '@univerjs/sheets-formula-ui';
-  import { UniverSheetsHyperLinkPlugin } from '@univerjs/sheets-hyper-link';
-  // import { UniverSheetsNumfmtUIPlugin } from '@univerjs/sheets-numfmt-ui';
-  // import { UniverSheetsThreadCommentUIPlugin } from '@univerjs/sheets-thread-comment-ui';
 
-  // import '@univerjs/sheets/facade';
-  // import '@univerjs/ui/facade';
-  // import '@univerjs/docs-ui/facade';
-  // import '@univerjs/sheets-ui/facade';
-  // import '@univerjs/sheets-data-validation/facade';
-  // import '@univerjs/engine-formula/facade';
-  // import '@univerjs/sheets-filter/facade';
-  // import '@univerjs/sheets-formula/facade';
-  // import '@univerjs/sheets-numfmt/facade';
-  // import '@univerjs/sheets-hyper-link-ui/facade';
-  // import '@univerjs/sheets-thread-comment/facade';
-  
-    // import {Univer } from "@univerjs/core";
-    // import { defaultTheme } from "@univerjs/design";
-    // import { UniverDocsPlugin } from "@univerjs/docs";
-    // import { UniverFormulaEnginePlugin } from "@univerjs/engine-formula";
-    // import { UniverRenderEnginePlugin } from "@univerjs/engine-render";
-    // import { UniverSheetsPlugin } from "@univerjs/sheets";
-    // import { UniverSheetsFormulaPlugin } from "@univerjs/sheets-formula";
-    // import { UniverSheetsUIPlugin } from "@univerjs/sheets-ui";
-    // import { UniverUIPlugin } from "@univerjs/ui";
-    // import { FUniver } from "@univerjs/facade";
-    // import FUniver from "@univerjs/facade";
-  
-    import { spread } from "svelte/internal";
-  
+
+
+
+
+
+
+
+
     const delay = ms => new Promise(res => setTimeout(res, ms));
     let sheet;
-    let funiver;
-  
-
-    let univer = new Univer({
-        theme: defaultTheme,
-        locale: LocaleType.EN_US,
-        locales: {
-        [LocaleType.EN_US]: Tools.deepMerge(
-            DesignEnUS,
-            DocsUIEnUS,
-            SheetsEnUS,
-            SheetsUIEnUS,
-            UIEnUS,
-            ThreadCommentUIEnUS,
-            // SheetsThreadCommentEnUS,
-            ThreadCommentUIEnUS,
-        ),
-        },
-    });
+    // let funiver;
   
     const maybeSave = async () =>{
       await delay(100)
-      const previousVersion = JSON.stringify(previousState)
-      const newVersion = JSON.stringify($synState)
+      // const previousVersion = JSON.stringify(previousState.spreadsheet)
+      const previousVersion = $synState.spreadsheet
+      const newVersion = sheet.save()
       // console.log(previousVersion)
       // console.log("-------------")
       // console.log(newVersion)
+      console.log('deep equal', deepEqual(previousVersion.sheets, newVersion.sheets))
+      if (!deepEqual(previousVersion, newVersion)) {
+        console.log("unsaved changes")
+        saveSheet()
+      }
       // if (previousVersion !== newVersion) {
         // console.log("unsaved changes")
-        saveSheet()
+        // saveSheet()
       // }
     }
   
     const updateSheet = async () => {
       // await delay(100)
       console.log("updating sheet")
-      const activeSheet = funiver.getActiveWorkbook().getActiveSheet();
+      const activeSheet = univerAPI.getActiveSheet() //.getActiveWorkbook().getActiveSheet();
       const spreadsheet = $synState.spreadsheet.sheets
       // console.log("spreadsheet", spreadsheet)
-      const localState = sheet.save().sheets;
+      const localState = sheet.save().sheets
       // console.log("localState", localState)
       let changed = false;
   
       // for each sheet in spreadsheet
       for (const sheet in spreadsheet) {
-        // console.log("sheet", sheet)
-        let fullRange = activeSheet.getRange(1, 1, 100, 100);
+        console.log("activesheet", activeSheet)
+        let fullRange = activeSheet.worksheet.getRange(1, 1, 100, 100);
         // let replacementRange = spreadsheet[sheet].cellData;
         // console.log("fullRange", fullRange)
         // console.log("replacementRange", replacementRange)
   
-        // console.log("compromiseValue", localState[sheet].cellData)
+        console.log("compromiseValue", localState, sheet)
         let compromiseValue = {...localState[sheet].cellData}
         // for each cell in sheet
         // console.log("sheet", spreadsheet[sheet].cellData)
@@ -223,9 +173,35 @@
     $: participants = activeBoard.participants()
     $: activeHashB64 = store.boardList.activeBoardHashB64;
     $: synState = activeBoard.readableState()
-    $: if ($synState && funiver) {
-      console.log("state change", $synState)
+    $: if ($synState && univerAPI && sheet) {
+      // console.log("state change", $synState)
+      // console.log("incoming spreadsheet", $synState.spreadsheet)
+      // console.log("unvier api", univerAPI.getActiveSheet().worksheet._worksheet._cellData)
+      
+      // const currentSheetId = univerAPI.getActiveSheet().worksheet._worksheet._sheetId
+      // const sheets = Object.keys($synState.spreadsheet.sheets)
+      // console.log("sheets", sheets)
+      // const newCellData = removeSymbolFields($synState.spreadsheet.sheets[currentSheetId].cellData)
+      // console.log("newCellData", newCellData)
+      
+      
+      // const currentCellData = cloneDeep(univerAPI.getActiveSheet().worksheet._worksheet._cellData._matrix)
+      // console.log("test========", resetMatrix)
+
+      // resetMatrix(currentCellData, newCellData)
+
+      // univerAPI.getActiveSheet().worksheet._worksheet._cellData._matrix = newCellData
+
+      // univerAPI.getActiveSheet().worksheet._worksheet._cellData = test
+
+      // console.log("unvier api", univerAPI.getActiveSheet().worksheet._worksheet._cellData)
+      
+      // const createRES = univerAPI.createWorkbook($synState.spreadsheet);
+      // univerAPI = createRES.univerAPI
+      // univer = createRES.univer
+
       updateSheet()
+
       // const s = sheet.getActiveSheet()
       // console.log(sheet.activeSheet())
       // const activeSheet = univerAPI.getActiveWorkbook().getActiveSheet();
@@ -245,7 +221,7 @@
         spreadsheet: sheetData
       }]
       activeBoard.requestChanges(changes)
-      previousState = {...cloneDeep($synState)}
+      // previousState = {...cloneDeep($synState)}
       // console.log("previous state set", previousState)
   
       // const l = await activeBoard.readableState()
@@ -281,74 +257,51 @@
       activeBoard.requestChanges([{type: 'set-props', props : newProps }])
     }
 
-     // ================== Register Plugins ==================
-     
-     function registerPlugins() {
-    univer.registerPlugin(UniverSheetsFormulaUIPlugin);
-    univer.registerPlugin(UniverSheetsConditionalFormattingPlugin);
-    univer.registerPlugin(UniverSheetsFilterPlugin);
-    univer.registerPlugin(UniverSheetsHyperLinkPlugin);
-    // univer.registerPlugin(UniverThreadCommentUIPlugin);
-    // univer.registerPlugin(UniverSheetsThreadCommentPlugin);
-    univer.registerPlugin(UniverDocsPlugin, {
-        hasScroll: false,
-    });
-    univer.registerPlugin(UniverRenderEnginePlugin);
-    univer.registerPlugin(UniverUIPlugin, {
-        container: "univer-container",
-        header: true,
-        toolbar: true,
-        footer: true,
-      });
+  let univerAPI;
+  let univer;
 
-    // univer.registerPlugin(UniverDocsUIPlugin);
-    univer.registerPlugin(UniverDocsUIPlugin, {
-      container: 'univer-container',
-      layout: {
-        docContainerConfig: {
-          innerLeft: false,
-        },
+  onMount(async () => {
+    const createRes = createUniver({
+      locale: LocaleType.EN_US,
+      locales: {
+        [LocaleType.EN_US]: merge(
+      {},
+      sheetsCoreEnUS,
+      sheetsConditionalFormattingEnUS,
+      sheetsDataValidationEnUS,
+      sheetsDrawingEnUS,
+      sheetsFilterEnUS,
+      sheetsHyperLinkEnUS,
+        ),
       },
+      theme: defaultTheme,
+      presets: [
+        UniverSheetsCorePreset(),
+        UniverSheetsConditionalFormattingPreset(),
+        UniverSheetsDataValidationPreset(),
+        UniverSheetsDrawingPreset(),
+        UniverSheetsFilterPreset(),
+        UniverSheetsHyperLinkPreset(),
+      ],
     });
 
-    univer.registerPlugin(UniverSheetsPlugin, {
-        notExecuteFormula: false,
-    });
-    univer.registerPlugin(UniverSheetsUIPlugin);
-    // univer.registerPlugin(UniverSheetsNumfmtPlugin);
-    univer.registerPlugin(UniverSheetsZenEditorPlugin);
-    univer.registerPlugin(UniverFormulaEnginePlugin, {
-        notExecuteFormula: false,
-    });
-    univer.registerPlugin(UniverSheetsFormulaPlugin);
-    univer.registerPlugin(UniverRPCMainThreadPlugin, {
-        workerURL: './worker.js',
-    } as IUniverRPCMainThreadConfig);
-    univer.registerPlugin(UniverSheetsHyperLinkUIPlugin);
-    univer.registerPlugin(UniverSheetsDataValidationPlugin);
-    univer.registerPlugin(UniverSheetsSortPlugin);
-    univer.registerPlugin(UniverSheetsSortUIPlugin);
-    univer.registerPlugin(UniverSheetsConditionalFormattingUIPlugin);
-    // univer.registerPlugin(UniverDocsDrawingUIPlugin);
-    univer.registerPlugin(UniverSheetsDrawingUIPlugin);
-  }
-  // ================== Register Plugins Ends ==================
-  
-    onMount(async () => {
-        registerPlugins()
-      console.log("previous state set", previousState)
-      const savedBoard = await activeBoard.readableState()
-      console.log($synState.spreadsheet)
-      sheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, $synState.spreadsheet);
-      console.log(sheet)
+    univerAPI = createRes.univerAPI
+    univer = createRes.univer
+
+      // registerPlugins()
+      // console.log("previous state set", previousState)
+      // const savedBoard = await activeBoard.readableState()
+      console.log("syn state", JSON.stringify($synState.spreadsheet))
+      // sheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, $synState.spreadsheet);
+      // console.log("savedBoard", savedBoard)
+      console.log("funiver", univerAPI)
+      sheet = univerAPI.createWorkbook($synState.spreadsheet);
+      console.log("create sheet result", sheet)
       // sheet = univer.createUniverDoc($synState.spreadsheet);
   
       previousState = cloneDeep($synState)
       console.log("clonedeep", previousState)
       window.addEventListener("keydown", checkKey);
-  
-      funiver = FUniver.newAPI(univer);
-      console.log("funiver", funiver)
       });
     
     const copyWalToPocket = () => {
@@ -456,7 +409,7 @@
     {#if $synState}
     <!-- <button on:click={saveSheet}>Save</button> -->
     <!-- <div id="spreadsheet" style="height:100%; position: relative; top: -32px;"> -->
-     <div id="univer-container" style="height:100vh; position: relative;" on:click={maybeSave}>
+     <div id="app" style="height:100vh; position: relative;" on:click={maybeSave}>
         <!-- <ReactAdapter
           el={Workbook}
           data={[{ name: "Sheet1", rows:20}]} 

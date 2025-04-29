@@ -96,22 +96,24 @@
 <AboutDialog bind:this={aboutDialog} />
 <div class="board-menu"
     class:wide={wide} >
+        <div class="new-board new-spreadsheet" on:click={()=>addSpreadsheet()} title="Spreadsheet"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>Spreadsheet</span></div>
+
         <!-- <h3 class="type-header">Boards</h3> -->
         <!-- dropdown new with multiple options -->
-        <div style="position: absolute; z-index: 1; margin: 3px;" on:mouseenter={()=>newBoardDropdown = true} on:mouseleave={()=>newBoardDropdown = false}>
-            <div class="new-board dropdown-button"  title="New"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>New</span></div>
-            {#if newBoardDropdown}
-                <div class="new-board new-spreadsheet" on:click={()=>addSpreadsheet()} title="Spreadsheet"><SvgIcon color="white" size=25px icon=spreadsheet style="margin-left: 15px;"/><span>Spreadsheet</span></div>
-                <div class="new-board new-doc" on:click={()=>addDocument()} title="Document"><SvgIcon color="white" size=25px icon=textDocument style="margin-left: 15px;"/><span>Document</span></div>
+        <!-- <div style="position: absolute; z-index: 1; margin: 3px;" on:mouseenter={()=>newBoardDropdown = true} on:mouseleave={()=>newBoardDropdown = false}> -->
+            <!-- <div class="new-board dropdown-button"  title="New"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>New</span></div> -->
+            <!-- {#if newBoardDropdown} -->
+                <!-- <div class="new-board new-spreadsheet" on:click={()=>addSpreadsheet()} title="Spreadsheet"><SvgIcon color="white" size=25px icon=spreadsheet style="margin-left: 15px;"/><span>Spreadsheet</span></div> -->
+                <!-- <div class="new-board new-doc" on:click={()=>addDocument()} title="Document"><SvgIcon color="white" size=25px icon=textDocument style="margin-left: 15px;"/><span>Document</span></div> -->
                 <!-- <div class="new-board" on:click={()=>{}} title="Presentation"><SvgIcon color="white" size=25px icon=presentation style="margin-left: 15px;"/><span>Presentation <small style="font-size: 11px; line-height: 12px; top: -5px; position: relative;">(comming soon)</small></span></div> -->
                 <!-- <div class="new-board" on:click={()=>{fileInput.click();}} title="Import"><SvgIcon color="white" size=25px icon=faUpload style="margin-left: 15px;"/><span>Import</span></div>
                 <input style="display:none" type="file" accept=".docx" on:change={(e)=>uploadDocument(e)} bind:this={fileInput} > -->
                 <!-- upload/import -->
                 <!-- <div class="new-board" on:click={()=>uploadDocument()} title="Upload"><SvgIcon color="white" size=25px icon=faFileImport style="margin-left: 15px;"/><span>Import file</span></div> -->
-            {/if}
-        </div>
+            <!-- {/if} -->
+        <!-- </div> -->
 
-        <div style="margin-top: 60px;"></div>
+        <!-- <div style="margin-top: 60px;"></div> -->
         <!-- <GroupParticipants/> -->
 
         <!-- <div class="new-board" on:click={()=>newBoardDialog.open()} title="New Spreadsheet"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>New Spreadsheet</span></div> -->
@@ -120,11 +122,15 @@
                 {#each $activeBoards.value as hash}
                     <div
                         on:click={()=> {
-                            // selectBoard(hash)
+                            selectBoard(hash)
                         }
                         }
                         class="board" >
-                        <BoardMenuItem boardType={BoardType.active} boardHash={hash}></BoardMenuItem>
+                        <BoardMenuItem boardType={BoardType.active} boardHash={hash}
+                            on:select={()=>{
+                                // selectBoard(hash)
+                            }}
+                        ></BoardMenuItem>
                         <!-- <div class="board-bg" style="background-image: url({bgUrl});"></div> -->
                     </div>
                 {/each}
@@ -177,7 +183,7 @@
         class:slideOut={$uiProps.showMenu == false}
         on:click={()=>aboutDialog.open()}>   
         <div class="logo" title="About Calcy!"><LogoIcon /></div>
-        <div class="cog"><SvgIcon icon=faCog size="20px" color="#fff"/></div>
+        <div class="cog"><SvgIcon icon=faCog size="18px" color="#fff"/></div>
     </div>
 </div>
 
@@ -186,6 +192,7 @@
         width: 100%;
     }
     .boards-section {
+        margin-top: 7px;
         display: flex;
         flex-wrap: wrap;
     }
@@ -304,7 +311,8 @@
     }
 
     .board {
-        width: 290px;
+        /* width: 290px; */
+        width: 200px;
         border-radius: 5px;
         padding: 10px;
         margin: 7px;
@@ -317,9 +325,9 @@
     }
 
     .board:hover {
-        /* cursor: pointer; */
+        cursor: pointer;
         z-index: 100;
-        /* background:  rgb(173, 169, 177); */
+        background:  rgb(173, 169, 177);
     }
 
     /* .board:hover {
@@ -343,7 +351,7 @@
         border-radius: 0;
         bottom: 0px;
         height: 40px;
-        display: block;
+        display: flex;
         align-items: center;
         width: 330px;
         left: 0;
@@ -393,8 +401,9 @@
     }
 
     .logo {
-        height: 16px;
+        height: 18px;
         margin-right: 5px;
+        margin-top: 1px;
     }
 
     .board-bg {

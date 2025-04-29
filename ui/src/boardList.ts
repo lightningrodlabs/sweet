@@ -2,22 +2,47 @@ import { HoloHashMap, LazyHoloHashMap } from "@holochain-open-dev/utils";
 import { derived, get, writable, type Readable, type Writable } from "svelte/store";
 import { type AgentPubKey, type EntryHash, type EntryHashB64, encodeHashToBase64 } from "@holochain/client";
 import {toPromise, type AsyncReadable, pipe, joinAsync, asyncDerived, sliceAndJoin, alwaysSubscribed} from '@holochain-open-dev/stores'
-import { OTSynStore, OTWorkspaceStore } from "@holochain-syn/core";
+import { SynStore, WorkspaceStore } from "@holochain-syn/core";
 import type { ProfilesStore } from "@holochain-open-dev/profiles";
 import { cloneDeep } from "lodash";
 import { Board, type BoardDelta, type BoardState } from "./board";
 import { hashEqual, convertPureStringToUDM } from "./util";
 
-import { LocaleType, DocumentFlavor, LogLevel, Univer, UniverInstanceType, UserManagerService , Tools } from '@univerjs/core';
-import { UniverRenderEnginePlugin, ptToPixel } from '@univerjs/engine-render'
 
-// import { UniverDocsPlugin } from "@univerjs/docs";
-// import { UniverFormulaEnginePlugin } from "@univerjs/engine-formula";
-// import { UniverRenderEnginePlugin } from "@univerjs/engine-render";
-// import { UniverSheetsPlugin } from "@univerjs/sheets";
-// import { UniverSheetsFormulaPlugin } from "@univerjs/sheets-formula";
-// import { UniverSlidesPlugin } from '@univerjs/slides';
-// import { UniverSlidesUIPlugin } from '@univerjs/slides-ui';
+import { LogLevel, ILogService, LocaleService, Univer, UniverInstanceType, type JSONXActions, type ICommand, TextXActionType, TextX, JSONX, ICommandService, CommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
+
+import { createUniver, defaultTheme, LocaleType, merge } from '@univerjs/presets'
+
+import { UniverSheetsCorePreset } from '@univerjs/presets/preset-sheets-core'
+import sheetsCoreEnUS from '@univerjs/presets/preset-sheets-core/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-core.css'
+
+import { UniverSheetsConditionalFormattingPreset } from '@univerjs/presets/preset-sheets-conditional-formatting'
+import sheetsConditionalFormattingEnUS from '@univerjs/presets/preset-sheets-conditional-formatting/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-conditional-formatting.css'
+
+import { UniverSheetsDataValidationPreset } from '@univerjs/presets/preset-sheets-data-validation'
+import sheetsDataValidationEnUS from '@univerjs/presets/preset-sheets-data-validation/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-data-validation.css'
+
+import { UniverSheetsDrawingPreset } from '@univerjs/presets/preset-sheets-drawing'
+import sheetsDrawingEnUS from '@univerjs/presets/preset-sheets-drawing/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-drawing.css'
+
+import { UniverSheetsFilterPreset } from '@univerjs/presets/preset-sheets-filter'
+import sheetsFilterEnUS from '@univerjs/presets/preset-sheets-filter/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-filter.css'
+
+import { UniverSheetsHyperLinkPreset } from '@univerjs/presets/preset-sheets-hyper-link'
+import sheetsHyperLinkEnUS from '@univerjs/presets/preset-sheets-hyper-link/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
+
+
+
+
+
+
+
 
 export enum BoardType {
     active = "active",
@@ -54,8 +79,8 @@ export class BoardList {
         const docStore = this.synStore.documents.get(documentHash)
         const board = pipe(docStore.allWorkspaces,
             workspaces => 
-                // new Board(docStore,  new OTWorkspaceStore(docStore, (get(this.activeWorkspaceHash) || Array.from(workspaces.keys())[0])))
-            new Board(docStore, new OTWorkspaceStore(docStore, Array.from(workspaces.keys())[0]))
+                // new Board(docStore,  new WorkspaceStore(docStore, (get(this.activeWorkspaceHash) || Array.from(workspaces.keys())[0])))
+            new Board(docStore, new WorkspaceStore(docStore, Array.from(workspaces.keys())[0]))
         )
         const latestState = pipe(board, 
             board => board.workspace.latestState
@@ -91,7 +116,7 @@ export class BoardList {
     allAgentBoards: AsyncReadable<ReadonlyMap<AgentPubKey, Array<BoardAndLatestState>>>
     allAuthorAgents: AsyncReadable<AgentPubKey[]>
 
-    constructor(public profilseStore: ProfilesStore, public synStore: OTSynStore) {
+    constructor(public profilseStore: ProfilesStore, public synStore: SynStore) {
         this.allAgentBoards = pipe(this.profilseStore.agentsWithProfile,
             agents=>{
                 return sliceAndJoin(this.agentBoardHashes, agents, {errors: "filter_out"})
@@ -153,7 +178,7 @@ export class BoardList {
             let board: Board | undefined = undefined
             if (workspaceHash) {
                 const documentStore = this.synStore.documents.get(hash)
-                const workspaceStore = new OTWorkspaceStore(documentStore, workspaceHash)
+                const workspaceStore = new WorkspaceStore(documentStore, workspaceHash)
                 board = await new Board(this.synStore.documents.get(hash), workspaceStore)
                 console.log("WORKSPACE", board)
             } else {
@@ -212,119 +237,37 @@ export class BoardList {
 
     async makeBoard(options: BoardState) : Promise<Board> {
         if (!options.name) {
-            options.name = "untitled"
+            options.name = "Untitled"
         }
 
-        // let univer;
-
-        const univer = new Univer({
-            // theme: defaultTheme,
+        const univerRES = createUniver({
             locale: LocaleType.EN_US,
             locales: {
-            // [LocaleType.EN_US]: Tools.deepMerge(
-            //     DesignEnUS,
-            //     DocsUIEnUS,
-            //     SheetsEnUS,
-            //     SheetsUIEnUS,
-            //     UIEnUS,
-            //     ThreadCommentUIEnUS,
-            //     SheetsThreadCommentEnUS,
-            // ),
+              [LocaleType.EN_US]: merge(
+            {},
+            sheetsCoreEnUS,
+            sheetsConditionalFormattingEnUS,
+            sheetsDataValidationEnUS,
+            sheetsDrawingEnUS,
+            sheetsFilterEnUS,
+            sheetsHyperLinkEnUS,
+              ),
             },
+            theme: defaultTheme,
+            presets: [
+              UniverSheetsCorePreset(),
+              UniverSheetsConditionalFormattingPreset(),
+              UniverSheetsDataValidationPreset(),
+              UniverSheetsDrawingPreset(),
+              UniverSheetsFilterPreset(),
+              UniverSheetsHyperLinkPreset(),
+            ],
         });
-        
-        // univer
-        // const univer = new Univer({
-        //     theme: defaultTheme,
-        //     locale: LocaleType.ZH_CN,
-        //     locales: {
-        //         [LocaleType.ZH_CN]: zhCN,
-        //         [LocaleType.EN_US]: enUS,
-        //         [LocaleType.RU_RU]: ruRU,
-        //     },
-        // });
 
-        // core plugins
-        // univer.registerPlugin(UniverRenderEnginePlugin);
-        // univer.registerPlugin(UniverFormulaEnginePlugin);
-        // univer.registerPlugin(UniverDebuggerPlugin);
-        // univer.registerPlugin(UniverUIPlugin, {
-        //     container: 'app',
-        //     footer: false,
-        // });
-        // univer.registerPlugin(UniverDocsPlugin);
-        // univer.registerPlugin(UniverDocsUIPlugin, {
-        //     container: 'univerdoc',
-        //     layout: {
-        //         docContainerConfig: {
-        //             innerLeft: false,
-        //         },
-        //     },
-        // });
-
-        // // core plugins
-        // univer.registerPlugin(UniverUIPlugin, {
-        //     container: "spreadsheet",
-        //     header: true,
-        //     toolbar: true,
-        //     footer: true,
-        // });
-    
-        // // doc plugins
-        // univer.registerPlugin(UniverDocsPlugin, {
-        //     hasScroll: false,
-        // });
-    
-        // sheet plugins
-        // univer.registerPlugin(UniverSheetsPlugin);
-        // univer.registerPlugin(UniverSheetsUIPlugin);
-        // univer.registerPlugin(UniverSheetsFormulaPlugin);
-        // univer.registerPlugin(UniverSlidesPlugin);
-        // univer.registerPlugin(UniverSlidesUIPlugin);
-        
         if (options.type == "spreadsheet") {
-            const newSheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, {});
+            const newSheet = univerRES.univerAPI.createWorkbook({}) //.createUnit(UniverInstanceType.UNIVER_SHEET, {});
+            console.log("NEW SHEET", newSheet.save())
             options.spreadsheet = newSheet.save()
-        } else if (options.type == "document") {
-            let newDoc = univer.createUnit(UniverInstanceType.UNIVER_DOC, {
-                    body: convertPureStringToUDM(''),
-                    drawings: {},
-                    drawingsOrder: [],
-                    headers: {},
-                    footers: {},
-                    tableSource: {},
-                    documentStyle: {
-                      documentFlavor: DocumentFlavor.TRADITIONAL, // enable header and footer
-                      pageSize: {
-                        width: ptToPixel(595),
-                        height: ptToPixel(842),
-                      },
-                      marginTop: ptToPixel(50),
-                      marginBottom: ptToPixel(50),
-                      marginRight: ptToPixel(40),
-                      marginLeft: ptToPixel(40),
-                      renderConfig: {
-                        vertexAngle: 0,
-                        centerAngle: 0,
-                      },
-                      defaultHeaderId: '',
-                      defaultFooterId: '',
-                      evenPageHeaderId: '',
-                      evenPageFooterId: '',
-                      firstPageHeaderId: '',
-                      firstPageFooterId: '',
-                    },
-                  }
-            );
-            console.log("NEW DOC", newDoc, newDoc.snapshot)
-            if (!options.spreadsheet) {
-                options.spreadsheet = newDoc.snapshot
-            }
-        } else {
-            let newPres = univer.createUnit(UniverInstanceType.UNIVER_SLIDE, {});
-            if (!options.spreadsheet) {
-                options.spreadsheet = newPres
-            }
         }
         const board = await Board.Create(this.synStore, options)
         // this.activeBoard.update((n) => {return board} )

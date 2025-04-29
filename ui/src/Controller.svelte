@@ -4,12 +4,11 @@
     import { CalcyStore } from './store'
     import { setContext } from 'svelte';
     import type { AppClient } from '@holochain/client';
-    import type { OTSynStore } from '@holochain-syn/core';
+    import type { SynStore } from '@holochain-syn/core';
     import type { ProfilesStore } from "@holochain-open-dev/profiles";
     import BoardMenu from "./BoardMenu.svelte";
     import type { WeaveClient } from "@theweave/api";;
     import { get } from 'svelte/store';
-    import DocumentPane from './DocumentPane.svelte';
     import SpreadsheetPane from './SpreadsheetPane.svelte';
 
     export let roleName = ""
@@ -23,7 +22,7 @@
       client,
       roleName,
     );
-    let synStore: OTSynStore = store.synStore
+    let synStore: SynStore = store.synStore
     let resetVar = true;
 
     $: activeBoardHash = store.boardList.activeBoardHash

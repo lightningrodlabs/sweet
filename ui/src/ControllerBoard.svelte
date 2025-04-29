@@ -1,11 +1,10 @@
 <script lang="ts">
     import CalcySpreadsheetPane from './CalcySpreadsheetPane.svelte';
-    import DocumentPane from './DocumentPane.svelte';
     import SpreadsheetPane from './SpreadsheetPane.svelte';
     import { CalcyStore } from './store'
     import { setContext } from 'svelte';
     import type { AppClient, EntryHash } from '@holochain/client';
-    import type { OTSynStore } from '@holochain-syn/core';
+    import type { SynStore } from '@holochain-syn/core';
     import type { ProfilesStore } from "@holochain-open-dev/profiles";
     import type { WeaveClient } from "@theweave/api";;
     import { onMount } from 'svelte';
@@ -23,7 +22,7 @@
       client,
       roleName,
     );
-    let synStore: OTSynStore = store.synStore
+    let synStore: SynStore = store.synStore
     store.boardList.setActiveBoard(board)
     $: activeBoardHash = store.boardList.activeBoardHash
     $: boardData = $activeBoardHash ? store.boardList.boardData2.get($activeBoardHash) : null

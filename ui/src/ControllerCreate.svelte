@@ -2,7 +2,7 @@
   import { CalcyStore } from './store'
   import { setContext } from 'svelte';
   import type { AppAgentClient } from '@holochain/client';
-  import { OTSynStore, SynClient } from '@holochain-syn/core';
+  import { SynStore, SynClient } from '@holochain-syn/core';
   import type { ProfilesStore } from "@holochain-open-dev/profiles";
   import type { WeClient } from "@theweave/api";;
   import { getMyDna } from './util';
@@ -19,7 +19,7 @@
     client,
     roleName,
   );
-  let synStore: OTSynStore = store.synStore
+  let synStore: SynStore = store.synStore
   setContext('synStore', {
     getStore: () => synStore,
   });
@@ -45,7 +45,7 @@ let disabled = true
             disabled={disabled}
             on:click={async ()=>{
             try {
-              const synStore = new OTSynStore(new SynClient(client, roleName));
+              const synStore = new SynStore(new SynClient(client, roleName));
               //const hrlB64 = hrlWithContextToB64(attachToHrlWithContext)
 
               // const board = await Board.Create(synStore, {/*boundTo:[hrlB64]*/name: inputElement.value})
