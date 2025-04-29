@@ -75,7 +75,7 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
       // console.log(previousVersion)
       // console.log("-------------")
       // console.log(newVersion)
-      console.log('deep equal', deepEqual(previousVersion.sheets, newVersion.sheets))
+      // console.log('deep equal', deepEqual(previousVersion.sheets, newVersion.sheets))
       if (!deepEqual(previousVersion, newVersion)) {
         console.log("unsaved changes")
         saveSheet()
@@ -90,39 +90,65 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
       // await delay(100)
       console.log("updating sheet")
       const activeSheet = univerAPI.getActiveSheet() //.getActiveWorkbook().getActiveSheet();
-      const spreadsheet = $synState.spreadsheet.sheets
+      const spreadsheets = $synState.spreadsheet.sheets
       // console.log("spreadsheet", spreadsheet)
       const localState = sheet.save().sheets
-      // console.log("localState", localState)
+      console.log("current sheet", sheet)
+      console.log("localState", localState)
       let changed = false;
+
+      // console.log("active sheet", activeSheet.worksheet._worksheet._sheetId)
+      let correspondingSpreadsheet = spreadsheets[activeSheet.worksheet._worksheet._sheetId]
+      // console.log("corresponding spreadsheet", correspondingSpreadsheet.cellData)
+      // fullRange.setValues(correspondingSpreadsheet.cellData)
   
       // for each sheet in spreadsheet
-      for (const sheet in spreadsheet) {
-        console.log("activesheet", activeSheet)
-        let fullRange = activeSheet.worksheet.getRange(1, 1, 100, 100);
-        // let replacementRange = spreadsheet[sheet].cellData;
+      const sheetpage = activeSheet.worksheet._worksheet._sheetId
+      // for (const sheetpage in spreadsheets) {
+        // console.log("sheet", sheetpage)
+        // let fullRange = activeSheet.worksheet.getRange(1, 1, 1000, 1000);
+        // let fullRange
         // console.log("fullRange", fullRange)
-        // console.log("replacementRange", replacementRange)
+
+        let beginRow = null;
+        let endRow = null;
+        let maxRow = 0;
+        let maxCol = 0;
+
+        let replacementRange = spreadsheets[sheetpage];
+        console.log("replacementRange", replacementRange)
   
-        console.log("compromiseValue", localState, sheet)
-        let compromiseValue = {...localState[sheet].cellData}
+        console.log("compromiseValue", localState, sheetpage)
+        let compromiseValue = {...localState[sheetpage].cellData}
         // for each cell in sheet
         // console.log("sheet", spreadsheet[sheet].cellData)
-        for (const row in spreadsheet[sheet].cellData) {
+        for (const row in spreadsheets[sheetpage].cellData) {
           if (compromiseValue[row] === undefined) {
             compromiseValue[row] = {}
           }
           // console.log("row", row)
-          for (const col in spreadsheet[sheet].cellData[row]) {
+          for (const col in spreadsheets[sheetpage].cellData[row]) {
             if (compromiseValue[row][col] === undefined) {
               compromiseValue[row][col] = {}
             }
             // console.log("col", col, row, spreadsheet[sheet].cellData[row][col])
             const previousValue = compromiseValue[row][col]
-            const newValue = spreadsheet[sheet].cellData[row][col]
+            const newValue = spreadsheets[sheetpage].cellData[row][col]
             // check if object values in previousValue differ from newValue
             if (!isEqual(previousValue, newValue)) {
-              // let microRange = activeSheet.getRange(row, col, 1, 1);
+              const rowNum = Number(row)
+              const colNum = Number(col)
+              console.log(rowNum,colNum,rowNum+1,colNum+1)
+              maxRow = rowNum
+              maxCol = colNum
+              if (!beginRow && !endRow) {
+                beginRow = rowNum
+                endRow = rowNum
+              }
+
+              // console.log("replaceement range", sheet, activeSheet.worksheet)
+              // let microRange = sheet.getRange(row, col, row, col);
+              // console.log("microrange", microRange)
               // microRange.setValue(newValue)
               compromiseValue[row][col] = newValue
               changed = true;
@@ -133,10 +159,11 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
         }
   
         if (changed) {
+          let fullRange = activeSheet.worksheet.getRange(beginRow | 1, endRow | 1, maxRow, maxCol);
           fullRange.setValues(compromiseValue);
           // replacementRange.setValues(compromiseValue);
         }
-      }
+      // }
     }
   
     function checkKey(e: any) {
@@ -288,21 +315,41 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
     univerAPI = createRes.univerAPI
     univer = createRes.univer
 
-      // registerPlugins()
-      // console.log("previous state set", previousState)
-      // const savedBoard = await activeBoard.readableState()
-      console.log("syn state", JSON.stringify($synState.spreadsheet))
-      // sheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, $synState.spreadsheet);
-      // console.log("savedBoard", savedBoard)
-      console.log("funiver", univerAPI)
-      sheet = univerAPI.createWorkbook($synState.spreadsheet);
-      console.log("create sheet result", sheet)
-      // sheet = univer.createUniverDoc($synState.spreadsheet);
-  
-      previousState = cloneDeep($synState)
-      console.log("clonedeep", previousState)
-      window.addEventListener("keydown", checkKey);
-      });
+    // registerPlugins()
+    // console.log("previous state set", previousState)
+    // const savedBoard = await activeBoard.readableState()
+    console.log("syn state", JSON.stringify($synState.spreadsheet))
+    // sheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, $synState.spreadsheet);
+    // console.log("savedBoard", savedBoard)
+    console.log("funiver", univerAPI)
+    sheet = univerAPI.createWorkbook($synState.spreadsheet);
+    console.log("create sheet result", sheet)
+    // sheet = univer.createUniverDoc($synState.spreadsheet);
+
+    previousState = cloneDeep($synState)
+    console.log("clonedeep", previousState)
+    window.addEventListener("keydown", checkKey);
+
+    // listen for tab click
+    // window.addEventListener("mousedown", test)
+    // const tabs = document.querySelectorAll('.univer-slide-tab-div');
+    // console.log("tabs", tabs)
+    // tabs.forEach(tab => {
+    //   console.log("tab", tab)
+    //   tab.addEventListener('click', copyWalToPocket)
+    // });
+
+    univerAPI.onCommandExecuted((command) => {
+      if (command.id == "sheet.operation.set-worksheet-active") {
+        console.log("command", command)
+        updateSheet()
+      }
+    })
+  });
+
+  const test = () => {
+    console.log("this is a test")
+  }
     
     const copyWalToPocket = () => {
       const attachment: WAL = {
@@ -416,7 +463,7 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
         /> -->
       </div>
     {/if}
-    <div class="bottom-fade"></div>
+    <!-- <div class="bottom-fade"></div> -->
   </div>
   <style>
     .univer-menubar {

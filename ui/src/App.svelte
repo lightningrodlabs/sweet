@@ -80,6 +80,8 @@
     else {
       weClient = await WeaveClient.connect(appletServices);
 
+      console.log("render type", weClient.renderInfo.view.name)
+
       switch (weClient.renderInfo.type) {
         case "applet-view":
           switch (weClient.renderInfo.view.type) {
@@ -97,11 +99,11 @@
               break;
             case "creatable":
               switch (weClient.renderInfo.view.name) {
-                case "spreadsheet":
+                case "Spreadsheet":
                   renderType = RenderType.CreateSpreadsheet
                   createView = weClient.renderInfo.view
                   break;
-                case "document":
+                case "Document":
                   renderType = RenderType.CreateDocument
                   createView = weClient.renderInfo.view
               }

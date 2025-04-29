@@ -1,6 +1,5 @@
 <script lang="ts">
     import CalcySpreadsheetPane from './CalcySpreadsheetPane.svelte';
-    import SpreadsheetPane from './SpreadsheetPane.svelte';
     import { CalcyStore } from './store'
     import { setContext } from 'svelte';
     import type { AppClient, EntryHash } from '@holochain/client';

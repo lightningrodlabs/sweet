@@ -6,7 +6,6 @@ integrity:
   network_seed: ~
   properties:
     type: "Calcy"
-  origin_time: 2023-11-03T00:00:00.0Z
   zomes:
     - name: syn_integrity
       bundled: ../../../target/wasm32-unknown-unknown/release/syn_integrity.wasm

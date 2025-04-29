@@ -9,7 +9,6 @@
     import BoardMenu from "./BoardMenu.svelte";
     import type { WeaveClient } from "@theweave/api";;
     import { get } from 'svelte/store';
-    import SpreadsheetPane from './SpreadsheetPane.svelte';
 
     export let roleName = ""
     export let client : AppClient
