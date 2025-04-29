@@ -1,11 +1,10 @@
 <script lang="ts">
     import Toolbar from './Toolbar.svelte'
-    import CalcyPane from './CalcyPane.svelte'
     import CalcySpreadsheetPane from './CalcySpreadsheetPane.svelte';
     import { CalcyStore } from './store'
     import { setContext } from 'svelte';
     import type { AppClient } from '@holochain/client';
-    import type { OTSynStore } from '@leosprograms/syn-core';
+    import type { OTSynStore } from '@holochain-syn/core';
     import type { ProfilesStore } from "@holochain-open-dev/profiles";
     import BoardMenu from "./BoardMenu.svelte";
     import type { WeaveClient } from "@theweave/api";;

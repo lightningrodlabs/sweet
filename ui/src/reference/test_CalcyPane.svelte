@@ -3,8 +3,8 @@
   import type { CalcyStore } from "./store";
   import { v1 as uuidv1 } from "uuid";
   import type {  Board, BoardDelta, BoardProps } from "./board";
-  import EditBoardDialog from "./EditBoardDialog.svelte";
-  import Avatar from "./Avatar.svelte";
+  import EditBoardDialog from "../shared/EditBoardDialog.svelte";
+  import Avatar from "../shared/Avatar.svelte";
   import { get } from 'svelte/store';
   import { RichText, DocumentViewModel, DocumentSkeleton, Documents, IRenderManagerService } from '@univerjs/engine-render';
   import { decodeHashFromBase64,encodeHashToBase64, type Timestamp, type Link } from "@holochain/client";
@@ -12,18 +12,18 @@
   import { encode, decode } from '@msgpack/msgpack';
   import '@shoelace-style/shoelace/dist/components/dropdown/dropdown.js';
   import '@shoelace-style/shoelace/dist/components/textarea/textarea.js';
-  import ClickEdit from "./ClickEdit.svelte";
+  import ClickEdit from "../ClickEdit.svelte";
   import { onVisible } from "./util";
-  import SvgIcon from "./SvgIcon.svelte";
+  import SvgIcon from "../shared/SvgIcon.svelte";
   import { exportBoard } from "./export";
-  import AttachmentsList from './AttachmentsList.svelte';
-  import AttachmentsDialog from "./AttachmentsDialog.svelte"
+  import AttachmentsList from '../AttachmentsList.svelte';
+  import AttachmentsDialog from "../shared/AttachmentsDialog.svelte"
   import type { AppClient } from '@holochain/client';
   import { createEventDispatcher } from "svelte";
   import dmp from 'dmp';
-  import Participants from "./Participants.svelte";
+  import Participants from "../shared/Participants.svelte";
   import type { WAL } from "@theweave/api";;
-  import '@lightningrodlabs/we-elements/dist/elements/wal-embed.js';
+  // import '@lightningrodlabs/we-elements/dist/elements/wal-embed.js';
 
   // import "@univerjs/sheets-numfmt/lib/index.css";
   import '@univerjs/thread-comment-ui/lib/index.css';
@@ -49,7 +49,7 @@
   import { UniverSheetsPlugin } from '@univerjs/sheets';
   import { UniverSheetsUIPlugin } from '@univerjs/sheets-ui';
   import { UniverUIPlugin } from '@univerjs/ui';
-  import { IRangeSelectorService, TextEditor, IEditorService } from '@univerjs/docs-ui';
+  // import { IRangeSelectorService, TextEditor, IEditorService } from '@univerjs/docs-ui';
   import { UniverSheetsConditionalFormattingUIPlugin } from '@univerjs/sheets-conditional-formatting-ui';
   // import { UniverSheetsThreadCommentPlugin } from '@univerjs/sheets-thread-comment';
   // import { UniverDebuggerPlugin } from '@univerjs/debugger';
@@ -74,9 +74,9 @@
   // import { UniverDocsMentionUIPlugin } from '@univerjs/docs-mention-ui';
   import { UniverSlidesPlugin } from '@univerjs/slides';
   import { UniverSlidesUIPlugin } from '@univerjs/slides-ui';
-  import { FUniver } from "@univerjs/facade";
-  import { text } from "svelte/internal";
-  import { SynClient, stateFromCommitOT, type Commit, type SessionMessage } from "@leosprograms/syn-core";
+  // import { FUniver } from "@univerjs/facade";
+  // import { text } from "svelte/internal";
+  import { SynClient, stateFromCommitOT, type Commit, type SessionMessage } from "@holochain-syn/core";
     // import { FreezeObject, from } from "automerge";
     // import { act } from "react";
 

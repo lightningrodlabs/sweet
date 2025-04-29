@@ -2,7 +2,7 @@
   import { encodeHashToBase64, type AgentPubKey } from "@holochain/client";
   import "@holochain-open-dev/profiles/dist/elements/agent-avatar.js";
   import { getContext } from "svelte";
-  import type { CalcyStore } from "./store";
+  import type { CalcyStore } from "../store";
   import SvgIcon from "./SvgIcon.svelte";
   import "@shoelace-style/shoelace/dist/components/skeleton/skeleton.js";
 
@@ -44,7 +44,7 @@
             {/if}
         {/if}
         {#if showNickname}
-            <div class="nickname" style="color: {nameColor}">{ nickname }</div>
+            <div class="nickname" style="color: {nameColor}">{nickname}</div>
         {/if}
     {/if}
 </div>
@@ -60,11 +60,11 @@
         flex-direction: row;
         justify-content:center;
         position: relative;
-        height: 100%;
+        /* height: 100%; */
         align-items: center;
     }
     .avatar-row .nickname{
-        margin-left: 0.5em;
+        /* margin-left: 0.5em; */
     }
     .highlighted {
         border: 4px solid #69e200; 

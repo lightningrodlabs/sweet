@@ -1,7 +1,7 @@
 <script lang="ts">
     import { getContext } from "svelte";
     import { encodeHashToBase64, type EntryHash } from '@holochain/client';
-    import SvgIcon from "./SvgIcon.svelte";
+    import SvgIcon from "./shared/SvgIcon.svelte";
     import '@shoelace-style/shoelace/dist/components/select/select.js';
     import '@shoelace-style/shoelace/dist/components/option/option.js';
     import '@shoelace-style/shoelace/dist/components/input/input.js';

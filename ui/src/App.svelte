@@ -13,6 +13,7 @@
   import LogoIcon from "./icons/LogoIcon.svelte";
   import { appletServices } from './we';
   import ControllerCreate from './ControllerCreate.svelte'
+  import Sync from './Sync.svelte';
 
   const appId = import.meta.env.VITE_APP_ID ? import.meta.env.VITE_APP_ID : 'calcy'
   const roleName = 'calcy'
@@ -194,6 +195,7 @@
   {/if}
 
 </profiles-context>
+<Sync client={client}/>
 {:else}
 <div class="loading"><div class="loader"></div></div>
 {/if}

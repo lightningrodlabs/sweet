@@ -1,4 +1,4 @@
-import type { OTDocumentStore, OTSessionStore, OTWorkspaceStore, OTSynStore } from "@leosprograms/syn-core";
+import type { OTDocumentStore, OTSessionStore, OTWorkspaceStore, OTSynStore } from "@holochain-syn/core";
 import { get, type Readable } from "svelte/store";
 import { v1 as uuidv1 } from "uuid";
 import { type AgentPubKey, type EntryHash, type EntryHashB64, encodeHashToBase64, type AgentPubKeyB64, type Timestamp } from "@holochain/client";

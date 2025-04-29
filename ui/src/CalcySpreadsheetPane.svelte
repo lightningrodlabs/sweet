@@ -3,22 +3,22 @@
     import type { CalcyStore } from "./store";
     import { v1 as uuidv1 } from "uuid";
     import type {  Board, BoardDelta, BoardProps } from "./board";
-    import EditBoardDialog from "./EditBoardDialog.svelte";
-    import Avatar from "./Avatar.svelte";
+    import EditBoardDialog from "./shared/EditBoardDialog.svelte";
+    import Avatar from "./shared/Avatar.svelte";
     import { decodeHashFromBase64, type Timestamp } from "@holochain/client";
     import { cloneDeep, isEqual } from "lodash";
     import '@shoelace-style/shoelace/dist/components/dropdown/dropdown.js';
     import '@shoelace-style/shoelace/dist/components/textarea/textarea.js';
     import ClickEdit from "./ClickEdit.svelte";
     import { onVisible } from "./util";
-    import SvgIcon from "./SvgIcon.svelte";
+    import SvgIcon from "./shared/SvgIcon.svelte";
     import { exportBoard } from "./export";
-    import AttachmentsList from './AttachmentsList.svelte';
-    import AttachmentsDialog from "./AttachmentsDialog.svelte"
-    import Participants from "./Participants.svelte";
+    import AttachmentsList from './shared/AttachmentsList.svelte';
+    import AttachmentsDialog from "./shared/AttachmentsDialog.svelte"
+    import Participants from "./shared/Participants.svelte";
 
     import type { WAL } from "@theweave/api";;
-    import '@lightningrodlabs/we-elements/dist/elements/wal-embed.js';
+    // import '@lightningrodlabs/we-elements/dist/elements/wal-embed.js';
   
     // import  {Workbook}  from "@fortune-sheet/react";
     // import ReactAdapter from "./ReactAdapter.svelte";
@@ -96,7 +96,7 @@
     // import { UniverSheetsFormulaPlugin } from "@univerjs/sheets-formula";
     // import { UniverSheetsUIPlugin } from "@univerjs/sheets-ui";
     // import { UniverUIPlugin } from "@univerjs/ui";
-    import { FUniver } from "@univerjs/facade";
+    // import { FUniver } from "@univerjs/facade";
     // import FUniver from "@univerjs/facade";
   
     import { spread } from "svelte/internal";

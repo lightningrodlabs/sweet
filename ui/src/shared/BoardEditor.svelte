@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type {  BoardProps, Board } from './board';
+    import type {  BoardProps, Board } from '../board';
     import { getContext, onMount } from 'svelte';
     import '@shoelace-style/shoelace/dist/components/dialog/dialog.js';
     import '@shoelace-style/shoelace/dist/components/button/button.js';
@@ -7,7 +7,7 @@
     import '@shoelace-style/shoelace/dist/components/checkbox/checkbox.js';
     import SvgIcon from "./SvgIcon.svelte"
     import { cloneDeep } from "lodash";
-    import type { CalcyStore } from './store';
+    import type { CalcyStore } from '../store';
   import type { EntryHash } from '@holochain/client';
 
     const { getStore } :any = getContext('store');

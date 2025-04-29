@@ -1,11 +1,11 @@
 <script lang="ts">
   import "@shoelace-style/shoelace/dist/components/skeleton/skeleton.js";
   import { createEventDispatcher, getContext } from "svelte";
-  import type { CalcyStore } from "./store";
+  import type { CalcyStore } from "../store";
   import { weaveUrlToWAL, type WAL } from "@theweave/api";;
   import SvgIcon from "./SvgIcon.svelte";
   import { hrlToString } from "@holochain-open-dev/utils";
-  import type { WALUrl } from "./util";
+  import type { WALUrl } from "../util";
 
   const dispatch = createEventDispatcher()
 

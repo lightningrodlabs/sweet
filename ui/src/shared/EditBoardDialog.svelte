@@ -1,13 +1,13 @@
 <script lang="ts">
     import BoardEditor from './BoardEditor.svelte';
-    import type { CalcyStore } from './store';
+    import type { CalcyStore } from '../store';
     import { getContext, onMount } from 'svelte';
     import { isEqual } from 'lodash'
     import { encodeHashToBase64, type EntryHash, type EntryHashB64 } from '@holochain/client';
     import '@shoelace-style/shoelace/dist/components/dialog/dialog.js';
     import '@shoelace-style/shoelace/dist/components/button/button.js';
     import type SlDialog from '@shoelace-style/shoelace/dist/components/dialog/dialog';
-    import type { Board, BoardProps, BoardState, } from './board';
+    import type { Board, BoardProps, BoardState, } from '../board';
 
     let boardHash:EntryHash|undefined = undefined
 

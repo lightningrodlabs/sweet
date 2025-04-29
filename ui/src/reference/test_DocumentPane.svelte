@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { setupUniverDocs, setupUniverSheets } from "./setup-univer";
+    import { setupUniverDocs } from "./setup-univer";
     import { getContext, onMount, onDestroy } from "svelte";
     import type { CalcyStore } from "./store";
     import { debounce, removeSymbolFields, changeUndefinedToEmptyString, extractActionsFromCommands, extractJSONXFromCommands } from "./util";
@@ -7,7 +7,12 @@
     import { cloneDeep, isEqual } from "lodash";
     import { decodeHashFromBase64, encodeHashToBase64, type Timestamp, type Link } from "@holochain/client";
     import { SynClient, stateFromCommitOT, type Commit, type SessionMessage } from "@holochain-syn/core";
-    import type { WAL } from "@theweave/api";;
+    import {
+      WeaveClient,
+      isWeaveContext,
+      initializeHotReload,
+      type WAL,
+    } from "@theweave/api";
     import { LocaleType, LogLevel, ILogService, LocaleService, Univer, UniverInstanceType, type JSONXActions, type ICommand, TextXActionType, TextX, 
             JSONX, ICommandService, CommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
     import type { Doc, JSONOp, Path } from 'ot-json1';
@@ -15,12 +20,12 @@
     import { encode, decode } from '@msgpack/msgpack';
     import { DocSelectionManagerService } from '@univerjs/docs';
     import { exportBoard } from "./export";
-    import Participants from "./shared/Participants.svelte";
-    import Avatar from "./shared/Avatar.svelte";
-    import SvgIcon from "./shared/SvgIcon.svelte";
-    import EditBoardDialog from "./shared/EditBoardDialog.svelte";
-    import AttachmentsDialog from "./shared/AttachmentsDialog.svelte";
-    import AttachmentsList from "./shared/AttachmentsList.svelte";
+    import Participants from "./Participants.svelte";
+    import Avatar from "./Avatar.svelte";
+    import SvgIcon from "./SvgIcon.svelte";
+    import EditBoardDialog from "./EditBoardDialog.svelte";
+    import AttachmentsDialog from "./AttachmentsDialog.svelte";
+    import AttachmentsList from "./AttachmentsList.svelte";
 
     export let activeBoard: Board
     export let profiles;
@@ -57,7 +62,7 @@
 
     async function applyCommands(preOps) {
         try {
-            console.log("clerksNewOperations", preOps)
+            // console.log("clerksNewOperations", preOps)
             
             // ==================UN-APPLY MY OPERATIONS==================
             for (let i = toCommit.length - 1; i >= 0; i--) {
@@ -65,20 +70,17 @@
 
                 const jsonX = JSONX.getInstance();
                 let jsonxOps: JSONOp = extractJSONXFromCommands([c])
-                console.log("jsonxOps", jsonxOps)
-                jsonxOps = JSONX.invertWithDoc(jsonxOps, univerAPI.getActiveWorkbook().save().body)
-                console.log("jsonxOps", jsonxOps)
-                JSONX.apply(univerAPI.getActiveWorkbook().save(), jsonxOps)
-                console.log("unapplied", univerAPI.getActiveWorkbook().save().body)
+                jsonxOps = JSONX.invertWithDoc(jsonxOps, univerAPI.getActiveDocument().getSnapshot().body)
+                JSONX.apply(univerAPI.getActiveDocument().getSnapshot(), jsonxOps)
 
                 if (false) {
                     // console.log("to commit", extractHumanReadableFromCommands([c])[0])
                     let operations = extractActionsFromCommands([c])
                     // if (operations.find(op => op.t == "d" || op.t == "r")) {
-                        operations = TextX.makeInvertible(operations, univerAPI.getActiveWorkbook().save().body)
+                        operations = TextX.makeInvertible(operations, univerAPI.getActiveDocument().getSnapshot().body)
                     // }
                     let reversedOps = TextX.invert(operations)
-                    TextX.apply(univerAPI.getActiveWorkbook().save().body, reversedOps)
+                    TextX.apply(univerAPI.getActiveDocument().getSnapshot().body, reversedOps)
                 }
             }
             // ==================UN-APPLY MY OPERATIONS ENDS==================
@@ -110,7 +112,6 @@
                 if (unknownOps.length > 0) {
                     // let unknownOps = extractActionsFromCommands(unknownCommands)
                     // let transformedOps = TextX.transform(operations, unknownOps)
-                    console.log('transforming', jsonxOps, unknownCommands)
                     transformedOps = JSONX.transform(jsonxOps, unknownOps, "left")
                 }
 
@@ -118,16 +119,14 @@
                 // let lastRetainPosition = unknownOps[0]?.len ? unknownOps[0].len : 0
                 
                 allTransformedOps = allTransformedOps.concat(transformedOps)
-                // TextX.apply(univerAPI.getActiveWorkbook().save().body
+                // TextX.apply(univerAPI.getActiveDocument().getSnapshot().body
                 // , transformedOps)
                 if (transformedOps.length > 0) {
-                    JSONX.apply(univerAPI.getActiveWorkbook().save(), transformedOps)
+                    JSONX.apply(univerAPI.getActiveDocument().getSnapshot(), transformedOps)
                 }
 
                 Object.keys(allSelections).forEach(author => {
-                    console.log("author", author, opAuthor)
                     if (opAuthor == encodeHashToBase64(store.myAgentPubKey)) {
-                        console.log("author 2", author)
                         // const opPos = transformedOps[transformedOps.length - 2]?.len + transformedOps[transformedOps.length - 1]?.len
                         // allSelections[opAuthor] = {
                         //     startOffset: opPos ? opPos : TextX.transformPosition(transformedOps, allSelections[opAuthor].startOffset),
@@ -143,7 +142,7 @@
                             endOffset: JSONX.transformPosition(jsonxOps, allSelections[opAuthor].endOffset, "right")
                         }
 
-                        console.log("transformed selection", allSelections[opAuthor].startOffset)
+                        // console.log("transformed selection", allSelections[opAuthor].startOffset)
 
                         // const injector = univer.__getInjector();
                         // const docSelectionManagerService = injector.get(DocSelectionManagerService);
@@ -151,7 +150,7 @@
                     //     console.log("current position", y)
                     //     const transformedRange = [TextX.transformPosition(transformedOps, y[0].startOffset), TextX.transformPosition(transformedOps, y[0].endOffset)]
                     //     console.log("transformed position", transformedRange)
-                        // univerAPI.getActiveWorkbook()?.setSelection(transformedRange[0], transformedRange[1])
+                        // univerAPI.getActiveDocument()?.setSelection(transformedRange[0], transformedRange[1])
                     } else {
                         allSelections[author] = {
                             startOffset: JSONX.transformPosition(jsonxOps, allSelections[author].startOffset, "right"),
@@ -181,7 +180,7 @@
                         // }
                     }
 
-                    univerAPI.getActiveWorkbook()?.setSelection(allSelections[author].startOffset, allSelections[author].endOffset)
+                    univerAPI.getActiveDocument()?.setSelection(allSelections[author].startOffset, allSelections[author].endOffset)
                 })
 
                 chronicleIndex ++
@@ -200,8 +199,9 @@
             if (isEqual($clerk, store.myAgentPubKey)) {
                 const newSynState = {
                     ...$synState.spreadsheet,
-                    body: univerAPI.getActiveWorkbook().save().body
+                    body: univerAPI.getActiveDocument().getSnapshot().body
                 }
+                console.log("saving")
                 activeBoard.requestChanges([{type: 'set-spreadsheet', spreadsheet: removeSymbolFields(newSynState)}])
             }
 
@@ -216,7 +216,7 @@
     }
 
     function paragraphIndex(cursor: number): number | undefined {
-        let paragraphs = univerAPI.getActiveWorkbook().save().body.paragraphs;
+        let paragraphs = univerAPI.getActiveDocument().getSnapshot().body.paragraphs;
         for (let i = 0; i < paragraphs.length; i++) {
             let p = paragraphs[i];
             if (cursor <= p.startIndex) {
@@ -227,7 +227,7 @@
     }
 
     async function hackRefresh() {
-        const unitId = univerAPI.getActiveWorkbook().id
+        const unitId = univerAPI.getActiveDocument().id
 
         let emptySpaceCommand = {
             "id": "doc.mutation.rich-text-editing",
@@ -253,7 +253,7 @@
         }
 
         await univerAPI.executeCommand(emptySpaceCommand.id, emptySpaceCommand.params, {"fromCollab": true})
-        univerAPI.getActiveWorkbook().setSelection(allSelections[encodeHashToBase64(activeBoard.session.myPubKey)].startOffset, allSelections[encodeHashToBase64(activeBoard.session.myPubKey)].endOffset)
+        univerAPI.getActiveDocument().setSelection(allSelections[encodeHashToBase64(activeBoard.session.myPubKey)].startOffset, allSelections[encodeHashToBase64(activeBoard.session.myPubKey)].endOffset)
     }
 
     const debouncedApplyCommandBatch = debounce(async() => {
@@ -267,6 +267,9 @@
     function setupCommandListener() {
         let beforeCommandListener = univerAPI.onBeforeCommandExecute((command, options) => {
             // console.log("beforeCommandListerner", command, options);
+            if (!options?.fromCollab && ["thread-comment.mutation.update-comment", "thread-comment.mutation.add-comment", "thread-comment.mutation.resolve-comment", "docs.command.delete-comment"].includes(command.id)) {
+              activeBoard.requestChanges([{type: 'add-comment', comment: removeSymbolFields(changeUndefinedToEmptyString(command))}])
+            }
 
             if (command.id == "doc.operation.set-selections" && command.params.isEditing == false) {
                 allSelections[encodeHashToBase64(activeBoard.session.myPubKey)] = {
@@ -315,7 +318,6 @@
                     // console.log("New Operations Broadcast", message.payload.operations.map(c => decode(c) as any))
                     if (message.payload.operations.length > 0 && toCommit.length == 0 && !timeToRetrieve) {
                         const decodedOps = message.payload.operations.map(c => decode(c) as any)
-                        console.log("decodedOps", decodedOps)
                         applyCommands(decodedOps)
                     }
                 }
@@ -389,7 +391,7 @@
                 workingFromCommit = latestHash as Uint8Array
                 workingFromState = fullDocument
                 console.log("workingFromCommit 3", workingFromCommit)
-                // debouncedApplyCommandBatch()
+                debouncedApplyCommandBatch()
 
                 allSelections[encodeHashToBase64(activeBoard.session.myPubKey)] = {
                     startOffset: 0,
@@ -426,6 +428,14 @@
         userManagerService.setCurrentUser(localUser);
     }
 
+    async function addSavedComments() {
+      $synState.commentCommands.forEach(comment => {
+        const cleanedComment = removeSymbolFields(changeUndefinedToEmptyString(comment))
+        console.log("comment", cleanedComment)
+        univerAPI.executeCommand(cleanedComment.id, cleanedComment.params, {"fromCollab": true})
+      })
+    }
+
     function startSyncInterval() {
         const applyCommandBatchInterval = setInterval(async() => {
         if ($clerkStatus == "found" && Date.now() - lastTypedTime > 200 && timeToRetrieve) {
@@ -437,8 +447,12 @@
     }
 
     const copyWalToPocket = () => {
-        const attachment: WAL = { hrl: [store.dnaHash, activeBoard.hash], context: JSON.stringify({docType: 'document'}) }
-        store.weClient?.walToPocket(attachment)
+        const attachment: WAL = {
+          hrl: [store.dnaHash, activeBoard.hash],
+          context: JSON.stringify({docType: 'document'}),
+        };
+        console.log("attachment", attachment)
+        store.weClient?.assets.assetToPocket(attachment);
     }
 
     const closeBoard = async () => {
@@ -460,15 +474,15 @@
         loading = true
         // setupToolbar(univerAPI)
         await setWorkingFromCommit()
-        // const res = await setupUniverDocs();
-        const res = await setupUniverSheets();
+        const res = await setupUniverDocs(changeUndefinedToEmptyString(removeSymbolFields(workingFromState.spreadsheet)));
         univerAPI = res[0]
         univer = res[1]
-        setUsers()
+        await setUsers()
         loading = false
-        // setupCommandListener()
-        // setupExternalCommandListener()
-        // startSyncInterval()
+        await addSavedComments()
+        setupCommandListener()
+        setupExternalCommandListener()
+        startSyncInterval()
     });
 
     onDestroy( async () => {
@@ -485,122 +499,122 @@
   <div class="board" >
     <EditBoardDialog bind:this={editBoardDialog}></EditBoardDialog>
     <!-- {JSON.stringify($synState.spreadsheet)} -->
-    <div class="top-bar">    
-        <div class="left-items">
-        {#if standAlone}
-            <h2>{$synState.name}</h2>
-        {:else}
-            {#if !tabView}
+  <div class="top-bar">    
+    <div class="left-items">
+      {#if standAlone}
+          <h2>{$synState.name}</h2>
+      {:else}
+          {#if !tabView}
             <button  class="board-button close" on:click={closeBoard} title="Close">
-                <SvgIcon icon=faClose size="16px"/>
+              <SvgIcon icon=faClose size="16px"/>
             </button>
-            {/if}
+          {/if}
 
-            <input
+          <input
             type="text"
             value={$synState.name}
             on:input={(e) => {
-                activeBoard.requestChanges([{type: 'set-name', name: e.target.value}])
+              activeBoard.requestChanges([{type: 'set-name', name: e.target.value}])
             }}
             on:blur={(e) => {
-                activeBoard.requestChanges([{type: 'set-name', name: e.target.value}])
+              activeBoard.requestChanges([{type: 'set-name', name: e.target.value}])
             }}
             on:keydown={(e) => {
-                if (e.key === "Enter") {
+              if (e.key === "Enter") {
                 e.target.blur()
-                }
+              }
             }}
             style="font-size: 16px; font-weight: bold; border: none; background: transparent; color: rgba(86, 92, 108, 1.0);"
-            />
-            <sl-dropdown class="board-options board-menu" skidding=15>
+          />
+          <sl-dropdown class="board-options board-menu" skidding=15>
             <sl-button slot="trigger"   class="board-button settings" caret>&nbsp;</sl-button>
             <sl-menu className="settings-menu">
-                <sl-menu-item on:click={()=> editBoardDialog.open(cloneDeep(activeBoard.hash))} class="board-settings" >
-                    <SvgIcon icon="faCog"  style="background: transparent; opacity: .5; position: relative; top: -2px;" size="14px"/> <span>Settings</span>
-                </sl-menu-item>
-                <sl-menu-item on:click={() => exportBoard($synState)} title="Export" class="board-export" >
+              <sl-menu-item on:click={()=> editBoardDialog.open(cloneDeep(activeBoard.hash))} class="board-settings" >
+                  <SvgIcon icon="faCog"  style="background: transparent; opacity: .5; position: relative; top: -2px;" size="14px"/> <span>Settings</span>
+              </sl-menu-item>
+              <sl-menu-item on:click={() => exportBoard($synState)} title="Export" class="board-export" >
                 <SvgIcon icon="faFileExport"  style="background: transparent; opacity: .5; position: relative; top: -2px;" size="14px" /> <span>Export</span>
-                </sl-menu-item>
-                <sl-menu-item on:click={() => {
+              </sl-menu-item>
+              <sl-menu-item on:click={() => {
                 store.archiveBoard(activeBoard.hash)
                 }} title="Archive" class="board-archive" >
                 <SvgIcon icon="faArchive" style="background: transparent; opacity: .5; position: relative; top: -2px;" size="14px" /> <span>Archive</span>
-                </sl-menu-item>
-                <sl-menu-item  on:click={leaveBoard} class="leave-board" >
-                    <SvgIcon icon="faArrowTurnDown" style="background: transparent; opacity: .5; position: relative; top: -2px;" size="12px" /> <span>Leave board</span>
-                </sl-menu-item>
+              </sl-menu-item>
+              <sl-menu-item  on:click={leaveBoard} class="leave-board" >
+                  <SvgIcon icon="faArrowTurnDown" style="background: transparent; opacity: .5; position: relative; top: -2px;" size="12px" /> <span>Leave board</span>
+              </sl-menu-item>
             </sl-menu>
-            </sl-dropdown>
-            {#if store.weClient}
+          </sl-dropdown>
+          {#if store.weClient}
             <AttachmentsDialog activeBoard={activeBoard} bind:this={attachmentsDialog}></AttachmentsDialog>
             {#if $synState.boundTo.length>0}
-                <div style="margin-left:10px;display:flex; align-items: center">
+              <div style="margin-left:10px;display:flex; align-items: center">
                 <span style="margin-right: 5px;">Bound To:</span>
                 <AttachmentsList allowDelete={false} attachments={$synState.boundTo} />
-                </div>
+              </div>
             {/if}
             <div style="margin-left:10px; margin-top:2px;display:flex">
-                <button title="Add Board to Pocket" class="attachment-button" style="margin-right:10px" on:click={()=>copyWalToPocket()} >          
+              <button title="Add Board to Pocket" class="attachment-button" style="margin-right:10px" on:click={()=>copyWalToPocket()} >          
                 <SvgIcon icon="addToPocket" size="20px"/>
-                </button>
-                <button class="attachment-button" style="margin-right:10px" on:click={()=>attachmentsDialog.open(undefined)} >          
+              </button>
+              <button class="attachment-button" style="margin-right:10px" on:click={()=>attachmentsDialog.open(undefined)} >          
                 <SvgIcon icon="link" size="16px"/>
-                </button>
-                {#if $synState.props.attachments}
+              </button>
+              {#if $synState.props.attachments}
                 <AttachmentsList attachments={$synState.props.attachments}
-                    allowDelete={false}/>
-                {/if}
+                  allowDelete={false}/>
+              {/if}
             </div>
-            {/if}
+          {/if}
     
         {/if}
-        </div>
+      </div>
 
-        <div class="right-items">
+      <div class="right-items">
         {#if participants}
-            <div class="participants">
+          <div class="participants">
             <div style="display:flex; flex-direction: row">
-                <!-- <button
+              <!-- <button
                 on:click={
-                    console.log(univerAPI.getActiveWorkbook().getBody().dataStream)
+                  console.log(univerAPI.getActiveDocument().getBody().dataStream)
                 }
-                >
+              >
                 Console
-                </button> -->
+              </button> -->
 
-                <!-- <button
+              <!-- <button
                 on:click={
-                    console.log($chronicle)
+                  console.log($chronicle)
                 }
-                >
+              >
                 Chronicle
-                </button> -->
+              </button> -->
 
-                <!-- {JSON.stringify($chronicle.length)} -->
+              <!-- {JSON.stringify($chronicle.length)} -->
 
-                <div style="margin: 7px; display: flex; flex-direction: row;" title="In order to work together, you must be synced with collaborators">
+              <div style="margin: 7px; display: flex; flex-direction: row;" title="In order to work together, you must be synced with collaborators">
                 {$clerkStatus == "found" ? "Synced" : "Syncing..."}
-                </div>
-                <div style="display:flex; justify-content:flex-end">
+              </div>
+              <div style="display:flex; justify-content:flex-end">
                 <!-- {JSON.stringify($clerk)} -->
                 <Participants board={activeBoard} highlightedAgent={$clerk} max={10}></Participants>
-                </div>
+              </div>
 
-                <!-- <Avatar agentPubKey={store.myAgentPubKey} showNickname={false} size={30} /> -->
+              <!-- <Avatar agentPubKey={store.myAgentPubKey} showNickname={false} size={30} /> -->
 
-                {#each Array.from(participants.entries()) as [agentPubKey, sessionData]}
+              {#each Array.from(participants.entries()) as [agentPubKey, sessionData]}
                 <!-- <div class:idle={Date.now()-sessionData.lastSeen >30000}> -->
-                    <Avatar agentPubKey={agentPubKey} showNickname={false} size={30} />
+                  <Avatar agentPubKey={agentPubKey} showNickname={false} size={30} />
                 <!-- </div> -->
-                {/each}
+              {/each}
 
             </div>
-            </div>
+          </div>
         {/if}
 
-        </div>
+      </div>
     </div>
-    </div>
+  </div>
 
     {#if loading}
     <div style="display: flex; justify-content: center; align-items: center; height: 100vh; width: 100vw;">

@@ -3,7 +3,7 @@
     import AvatarDialog from './AvatarDialog.svelte';
     import { getContext, onMount } from "svelte";
     import type { CalcyStore } from "./store";
-    import Avatar from './Avatar.svelte';
+    import Avatar from './shared/Avatar.svelte';
     import { get } from 'svelte/store';    
     import { isWeaveContext } from "@theweave/api";;
 

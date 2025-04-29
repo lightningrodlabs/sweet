@@ -1,13 +1,13 @@
 <script lang="ts">
     import { getContext } from "svelte";
     import '@shoelace-style/shoelace/dist/components/dialog/dialog.js';
-    import SvgIcon from "./SvgIcon.svelte";
+    import SvgIcon from "./shared/SvgIcon.svelte";
     import type { CalcyStore } from "./store";
     import {asyncDerived, toPromise} from '@holochain-open-dev/stores'
     import { BoardType } from "./boardList";
     import type { Board, BoardEphemeralState, BoardState } from "./board";
     import { deserializeExport, exportBoards } from "./export";
-    import { DocumentStore, WorkspaceStore } from "@leosprograms/syn-core";
+    import { DocumentStore, WorkspaceStore } from "@holochain-syn/core";
     import { encodeHashToBase64 } from "@holochain/client";
 
 

@@ -1,12 +1,11 @@
 <script lang="ts">
-    import CalcyPane from './CalcyPane.svelte'
     import CalcySpreadsheetPane from './CalcySpreadsheetPane.svelte';
     import DocumentPane from './DocumentPane.svelte';
     import SpreadsheetPane from './SpreadsheetPane.svelte';
     import { CalcyStore } from './store'
     import { setContext } from 'svelte';
     import type { AppClient, EntryHash } from '@holochain/client';
-    import type { OTSynStore } from '@leosprograms/syn-core';
+    import type { OTSynStore } from '@holochain-syn/core';
     import type { ProfilesStore } from "@holochain-open-dev/profiles";
     import type { WeaveClient } from "@theweave/api";;
     import { onMount } from 'svelte';

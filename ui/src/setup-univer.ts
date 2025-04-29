@@ -76,7 +76,7 @@ import { UniverSheetsZenEditorPlugin } from '@univerjs/sheets-zen-editor';
 import { UniverSheetsSortPlugin } from '@univerjs/sheets-sort';
 import { UniverSheetsSortUIPlugin } from '@univerjs/sheets-sort-ui';
 
-import { FUniver } from '@univerjs/facade'
+// import { FUniver } from '@univerjs/facade'
 import { convertPureStringToUDM } from './util'
 
 import UniverDesignEnUS from '@univerjs/design/locale/en-US'

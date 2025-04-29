@@ -4,7 +4,7 @@
   import Search from './Search.svelte';
   import { getContext } from "svelte";
   import type { CalcyStore } from "./store";
-  import SvgIcon from "./SvgIcon.svelte";
+  import SvgIcon from "./shared/SvgIcon.svelte";
 
   const { getStore } :any = getContext("store");
   let store: CalcyStore = getStore();

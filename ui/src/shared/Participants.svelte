@@ -3,7 +3,7 @@
   import { isEqual } from "lodash";
  
   import Avatar from "./Avatar.svelte";
-  import type { Board } from "./board";
+  import type { Board } from "../board";
 
   export let board: Board
   export let highlightedAgent: AgentPubKey;
@@ -18,14 +18,16 @@
     {#if $participants && $participants.status=="complete"}
     {@const folks = Array.from($participants.value).slice(0,max)}
     {@const extra = $participants.value.length - folks.length}
-      {#each folks as agentPubKey}
-      <span style="margin: 2px;">
-        <Avatar size={size} agentPubKey={agentPubKey} showNickname={false} highlight={isEqual(agentPubKey, highlightedAgent)} />
-      </span>
-      {/each}
-      {#if extra != 0}
+      <div style="margin-left: 6px;">
+        {#each folks as agentPubKey}
+        <span style="margin-left: -6px;">
+          <Avatar size={size} agentPubKey={agentPubKey} showNickname={false} highlight={isEqual(agentPubKey, highlightedAgent)} />
+        </span>
+        {/each}
+        {#if extra != 0}
         + {extra} more
-      {/if}
+        {/if}
+      </div>
     {/if}
 </div>
 <style>

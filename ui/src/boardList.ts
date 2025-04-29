@@ -2,7 +2,7 @@ import { HoloHashMap, LazyHoloHashMap } from "@holochain-open-dev/utils";
 import { derived, get, writable, type Readable, type Writable } from "svelte/store";
 import { type AgentPubKey, type EntryHash, type EntryHashB64, encodeHashToBase64 } from "@holochain/client";
 import {toPromise, type AsyncReadable, pipe, joinAsync, asyncDerived, sliceAndJoin, alwaysSubscribed} from '@holochain-open-dev/stores'
-import { OTSynStore, OTWorkspaceStore } from "@leosprograms/syn-core";
+import { OTSynStore, OTWorkspaceStore } from "@holochain-syn/core";
 import type { ProfilesStore } from "@holochain-open-dev/profiles";
 import { cloneDeep } from "lodash";
 import { Board, type BoardDelta, type BoardState } from "./board";
@@ -46,14 +46,16 @@ export class BoardList {
     allBoards: AsyncReadable<ReadonlyMap<Uint8Array, BoardAndLatestState>>
     activeBoardHash: Writable<EntryHash| undefined> = writable(undefined)
     activeBoardHashB64: Readable<string| undefined> = derived(this.activeBoardHash, s=> s ? encodeHashToBase64(s): undefined)
+    activeWorkspaceHash: Writable<EntryHash| undefined> = writable(undefined)
+    activeWorkspaceHashB64: Readable<string| undefined> = derived(this.activeWorkspaceHash, s=> s ? encodeHashToBase64(s): undefined)
     boardCount: AsyncReadable<number>
 
     boardData2 = new LazyHoloHashMap( documentHash => {
         const docStore = this.synStore.documents.get(documentHash)
-
         const board = pipe(docStore.allWorkspaces,
             workspaces => 
-                new Board(docStore,  new OTWorkspaceStore(docStore, Array.from(workspaces.keys())[0]))
+                // new Board(docStore,  new OTWorkspaceStore(docStore, (get(this.activeWorkspaceHash) || Array.from(workspaces.keys())[0])))
+            new Board(docStore, new OTWorkspaceStore(docStore, Array.from(workspaces.keys())[0]))
         )
         const latestState = pipe(board, 
             board => board.workspace.latestState
@@ -61,9 +63,8 @@ export class BoardList {
         const tip = pipe(board,
             board => board.workspace.tip
             )
-return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latestState, board]) => {return {board, latestState, tip: tip ? tip.entryHash : undefined}}))
+        return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latestState, board]) => {return {board, latestState, tip: tip ? tip.entryHash : undefined}}))
     })
-
 
     agentBoardHashes: LazyHoloHashMap<AgentPubKey, AsyncReadable<Array<BoardAndLatestState>>> = new LazyHoloHashMap(agent =>
         pipe(this.activeBoardHashes,
@@ -140,15 +141,25 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
         return board.board
     }
 
-    async setActiveBoard(hash: EntryHash | undefined) : Promise<Board | undefined> {
+    async setActiveBoard(hash: EntryHash | undefined, workspaceHash?: EntryHash | undefined) : Promise<Board | undefined> {
         let board: Board | undefined = undefined
         const current = get(this.activeBoard)
+        const currentWorkspaceHash = get(this.activeWorkspaceHash)
         // if no change then don't update
         if (!current && !hash) return
-        if (current && hash && hashEqual(hash, current.hash)) return
+        if (current && hash && hashEqual(hash, current.hash) && hashEqual(workspaceHash, currentWorkspaceHash)) return
 
         if (hash) {
-            board = (await toPromise(this.boardData2.get(hash))).board
+            let board: Board | undefined = undefined
+            if (workspaceHash) {
+                const documentStore = this.synStore.documents.get(hash)
+                const workspaceStore = new OTWorkspaceStore(documentStore, workspaceHash)
+                board = await new Board(this.synStore.documents.get(hash), workspaceStore)
+                console.log("WORKSPACE", board)
+            } else {
+                board = (await toPromise(this.boardData2.get(hash))).board
+                console.log("NO WORKSPACE", board)
+            }
             if (board) {
                 let sessionParticipants = await toPromise(board.sessionParticipants())
                 await board.join()
@@ -160,6 +171,7 @@ return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latest
             this.activeBoard.update((n) => {return undefined} )
         }
         this.activeBoardHash.update((n) => {return hash} )
+        this.activeWorkspaceHash.update((n) => {return workspaceHash} )
 
         return board
     }

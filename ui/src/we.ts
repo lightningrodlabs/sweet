@@ -1,4 +1,4 @@
-import { OTDocumentStore, SynClient, OTSynStore, OTWorkspaceStore } from '@leosprograms/syn-core';
+import { OTDocumentStore, SynClient, OTSynStore, OTWorkspaceStore } from '@holochain-syn/core';
 import type { BoardEphemeralState, BoardState } from './board';
 import { asyncDerived, pipe, sliceAndJoin, toPromise } from '@holochain-open-dev/stores';
 import { BoardType } from './boardList';

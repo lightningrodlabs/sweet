@@ -4,7 +4,7 @@
     import type {  EntryHash } from '@holochain/client';
     import GroupParticipants from './GroupParticipants.svelte';
     import NewBoardDialog from './NewBoardDialog.svelte';
-    import SvgIcon from "./SvgIcon.svelte";
+    import SvgIcon from "./shared/SvgIcon.svelte";
     import AboutDialog from "./AboutDialog.svelte";
     import LogoIcon from "./icons/LogoIcon.svelte";
     import BoardMenuItem from "./BoardMenuItem.svelte";
@@ -98,17 +98,17 @@
     class:wide={wide} >
         <!-- <h3 class="type-header">Boards</h3> -->
         <!-- dropdown new with multiple options -->
-        <div style="position: absolute; z-index: 1;" on:mouseenter={()=>newBoardDropdown = true} on:mouseleave={()=>newBoardDropdown = false}>
-        <div class="new-board dropdown-button"  title="New"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>New</span></div>
-        {#if newBoardDropdown}
-            <div class="new-board" on:click={()=>addSpreadsheet()} title="Spreadsheet"><SvgIcon color="white" size=25px icon=spreadsheet style="margin-left: 15px;"/><span>Spreadsheet</span></div>
-            <div class="new-board" on:click={()=>addDocument()} title="Board"><SvgIcon color="white" size=25px icon=textDocument style="margin-left: 15px;"/><span>Document</span></div>
-            <!-- <div class="new-board" on:click={()=>{}} title="Presentation"><SvgIcon color="white" size=25px icon=presentation style="margin-left: 15px;"/><span>Presentation <small style="font-size: 11px; line-height: 12px; top: -5px; position: relative;">(comming soon)</small></span></div> -->
-            <!-- <div class="new-board" on:click={()=>{fileInput.click();}} title="Import"><SvgIcon color="white" size=25px icon=faUpload style="margin-left: 15px;"/><span>Import</span></div>
-            <input style="display:none" type="file" accept=".docx" on:change={(e)=>uploadDocument(e)} bind:this={fileInput} > -->
-            <!-- upload/import -->
-            <!-- <div class="new-board" on:click={()=>uploadDocument()} title="Upload"><SvgIcon color="white" size=25px icon=faFileImport style="margin-left: 15px;"/><span>Import file</span></div> -->
-        {/if}
+        <div style="position: absolute; z-index: 1; margin: 3px;" on:mouseenter={()=>newBoardDropdown = true} on:mouseleave={()=>newBoardDropdown = false}>
+            <div class="new-board dropdown-button"  title="New"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>New</span></div>
+            {#if newBoardDropdown}
+                <div class="new-board new-spreadsheet" on:click={()=>addSpreadsheet()} title="Spreadsheet"><SvgIcon color="white" size=25px icon=spreadsheet style="margin-left: 15px;"/><span>Spreadsheet</span></div>
+                <div class="new-board new-doc" on:click={()=>addDocument()} title="Document"><SvgIcon color="white" size=25px icon=textDocument style="margin-left: 15px;"/><span>Document</span></div>
+                <!-- <div class="new-board" on:click={()=>{}} title="Presentation"><SvgIcon color="white" size=25px icon=presentation style="margin-left: 15px;"/><span>Presentation <small style="font-size: 11px; line-height: 12px; top: -5px; position: relative;">(comming soon)</small></span></div> -->
+                <!-- <div class="new-board" on:click={()=>{fileInput.click();}} title="Import"><SvgIcon color="white" size=25px icon=faUpload style="margin-left: 15px;"/><span>Import</span></div>
+                <input style="display:none" type="file" accept=".docx" on:change={(e)=>uploadDocument(e)} bind:this={fileInput} > -->
+                <!-- upload/import -->
+                <!-- <div class="new-board" on:click={()=>uploadDocument()} title="Upload"><SvgIcon color="white" size=25px icon=faFileImport style="margin-left: 15px;"/><span>Import file</span></div> -->
+            {/if}
         </div>
 
         <div style="margin-top: 60px;"></div>
@@ -119,10 +119,13 @@
             {#if $activeBoards.status == "complete" && $activeBoards.value.length > 0}
                 {#each $activeBoards.value as hash}
                     <div
-                        on:click={()=>selectBoard(hash)}
+                        on:click={()=> {
+                            // selectBoard(hash)
+                        }
+                        }
                         class="board" >
                         <BoardMenuItem boardType={BoardType.active} boardHash={hash}></BoardMenuItem>
-                        <div class="board-bg" style="background-image: url({bgUrl});"></div>
+                        <!-- <div class="board-bg" style="background-image: url({bgUrl});"></div> -->
                     </div>
                 {/each}
             {/if}
@@ -250,8 +253,7 @@
         position: relative;
         width: 168px;
         height: 50px;
-        /* background: rgba(24, 55, 122, 1.0); */
-        background: #7400eae6;
+        background: #4f336be6;
         border: 1px solid #4A559D;
         color: #fff;
         display: flex;
@@ -267,13 +269,23 @@
 
     .new-board:hover {
         cursor: pointer;
-        padding: 15px 5px;
-        width: 178px;
-        border: 1px solid #252d5d;
-        /* background: rgb(10, 25, 57); */
-        background: #8e31ebe6;
-        margin: 0 -5px 0 -5px;
         box-shadow: 0px 4px 15px rgba(35, 32, 74, 0.8);
+    }
+
+    .new-spreadsheet {
+        background-color: hsla(270, 54%, 44%, 0.8);
+    }
+
+    .new-spreadsheet:hover {
+        background-color: hsla(270, 47%, 38%, 1);
+    }
+
+    .new-doc {
+        background-color: hsl(232, 36%, 45%, 0.8);
+    }
+
+    .new-doc:hover {
+        background-color: hsl(232, 36%, 45%, 1);
     }
 
     .new-board.dropdown-button {
@@ -298,13 +310,19 @@
         margin: 7px;
         transition: all .15s ease;
         /* border: 1px solid; */
-        background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgb(200 221 237) 100%);
+        background: rgb(202, 202, 216);
         position: relative;
         display: block;
-        box-shadow: 0px 4px 8px rgba(167, 165, 189, 0.8);
+        /* box-shadow: 0px 4px 8px rgba(167, 165, 189, 0.8); */
     }
 
     .board:hover {
+        /* cursor: pointer; */
+        z-index: 100;
+        /* background:  rgb(173, 169, 177); */
+    }
+
+    /* .board:hover {
         cursor: pointer;
         z-index: 100;
         padding: 15px;
@@ -317,7 +335,7 @@
 
     .wide .board:hover {
         margin: 0 4px 0 0;
-    }
+    } */
 
     .footer {
         position: fixed;

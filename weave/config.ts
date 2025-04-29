@@ -75,8 +75,8 @@ export default defineConfig({
       subtitle: 'Sweet',
       description: 'Real-time collaborative tables based on syn.',
       icon: {
-        type: 'filesystem',
-        path: './weave/calcy.svg',
+        type: "https",
+        url: "https://raw.githubusercontent.com/lightningrodlabs/sweet/753b52645c2a99b8c211626df29d7dadaac2530b/we_dev/calcy.svg"
       },
       source: {
         type: 'localhost',

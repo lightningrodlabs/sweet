@@ -18,7 +18,7 @@
   import type { AppClient } from '@holochain/client';
 
   import type { WAL } from "@theweave/api";;
-  import '@lightningrodlabs/we-elements/dist/elements/wal-embed.js';
+  // import '@lightningrodlabs/we-elements/dist/elements/wal-embed.js';
 
   // import  {Workbook}  from "@fortune-sheet/react";
   // import ReactAdapter from "./ReactAdapter.svelte";
@@ -66,7 +66,7 @@
   import { UniverSheetsSortPlugin } from '@univerjs/sheets-sort';
   import { UniverSheetsSortUIPlugin } from '@univerjs/sheets-sort-ui';
   
-  import { FUniver } from "@univerjs/facade";
+  // import { FUniver } from "@univerjs/facade";
   import { spread } from "svelte/internal";
   import App from "./App.svelte";
 

@@ -3,7 +3,7 @@
     import '@shoelace-style/shoelace/dist/components/dialog/dialog.js';
     import { getContext } from "svelte";
     import type { CalcyStore } from "./store";
-    import Avatar from './Avatar.svelte';
+    import Avatar from './shared/Avatar.svelte';
     import "@holochain-open-dev/stores/dist/debug-store.js"
     import type { AgentPubKey } from "@holochain/client";
   

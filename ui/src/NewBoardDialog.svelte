@@ -1,5 +1,5 @@
 <script lang="ts">
-    import BoardEditor from './BoardEditor.svelte';
+    import BoardEditor from './shared/BoardEditor.svelte';
     import type { CalcyStore } from './store';
     import { getContext } from 'svelte';
     import type { BoardProps } from './board';

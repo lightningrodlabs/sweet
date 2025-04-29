@@ -6,22 +6,29 @@
     "tests"
   ],
   "scripts": {
-    "start": "AGENTS=2 BOOTSTRAP_PORT=$(port) SIGNAL_PORT=$(port) npm run network",
-    "dev": "VITE_ADMIN_PORT=$(port) VITE_APP_PORT=$(port) SIGNAL_PORT=$(port) BOOTSTRAP_PORT=$(port) UI_PORT=8888 npm run x",
-    "x": "hc s clean &&  npm run build:happ && UI_PORT=8888 concurrently \"npm start -w ui\" \"npm run start:happ\" \"hc run-local-services -b $BOOTSTRAP_PORT -s $SIGNAL_PORT\"",
-    "tool-dev": " UI_PORT=8888 npm run tool-devy",
-    "tool-devy": "concurrently \"npm start -w ui\" \"sleep 1 && weave --agent-idx 1 --dev-config weave/config.ts\" \"sleep 10 && weave --agent-idx 2 --dev-config weave/config.ts\"",
-    "tool-devx": "BPORT=46263 SPORT=46262; concurrently \"hc run-local-services -b $BPORT -s $SPORT\" \"npm start -w ui\" \"./weave/we.AppImage  --dev-config weave/config.json --agent-num 1 -b http://127.0.0.1:$BPORT -s ws://127.0.0.1:$SPORT\" \"sleep 10 && ./weave/we.AppImage --dev-config weave/config.json --agent-num 2 -b http://127.0.0.1:$BPORT -s ws://127.0.0.1:$SPORT\"",
-    "network": "hc s clean && npm run build:happ && UI_PORT=8888 concurrently \"npm start -w ui\" \"npm run launch:happ\" \"holochain-playground\"",
-    "test": "npm run build:zomes && hc app pack workdir --recursive && npm t -w tests",
+    "start": "UI_PORT=8888 yarn run network",
+    "start1": "AGENTS=2 BOOTSTRAP_PORT=$(port) SIGNAL_PORT=$(port) yarn network",
+    "dev": "VITE_ADMIN_PORT=$(port) VITE_APP_PORT=$(port) SIGNAL_PORT=$(port) BOOTSTRAP_PORT=$(port) UI_PORT=8888 yarn run x",
+    "x": "hc s clean &&  yarn run build:happ && UI_PORT=8888 concurrently \"yarn workspace ui start\" \"yarn run start:happ\" \"hc run-local-services -b $BOOTSTRAP_PORT -s $SIGNAL_PORT\"",
+    "tool-dev": " UI_PORT=8888 yarn tool-devy",
+    "tool-devy": "concurrently \"yarn workspace ui start\" \"sleep 1 && weave --agent-idx 1 --dev-config weave/config.ts\" \"sleep 10 && weave --agent-idx 2 --dev-config weave/config.ts\"",
+    "tool-devx": "BPORT=46263 SPORT=46262; concurrently \"hc run-local-services -b $BPORT -s $SPORT\" \"yarn workspace ui start\" \"./weave/we.AppImage  --dev-config weave/config.json --agent-num 1 -b http://127.0.0.1:$BPORT -s ws://127.0.0.1:$SPORT\" \"sleep 10 && ./weave/we.AppImage --dev-config weave/config.json --agent-num 2 -b http://127.0.0.1:$BPORT -s ws://127.0.0.1:$SPORT\"",
+    "network": "hc s clean && yarn run build:happ && concurrently \"yarn workspace ui run start\" \"hc-spin -n 2 --ui-port 8888 ./workdir/calcy.webhapp\"",
+    "network1": "hc s clean && yarn run build:happ && UI_PORT=8888 concurrently \"yarn workspace ui start\" \"yarn run launch:happ\" \"holochain-playground\"",
+    "test": "yarn run build:zomes && hc app pack workdir --recursive && yarn workspace tests t",
     "launch:happ": "concurrently \"hc run-local-services --bootstrap-port $BOOTSTRAP_PORT --signal-port $SIGNAL_PORT\" \"echo pass | RUST_LOG=warn hc launch --piped -n $AGENTS workdir/calcy.happ --ui-port $UI_PORT network --bootstrap http://127.0.0.1:\"$BOOTSTRAP_PORT\" webrtc ws://127.0.0.1:\"$SIGNAL_PORT\"\"",   
-    "package": "rm -f ui/dist.zip && rm -rf ui/dist && npm run build:happ && NODE_OPTIONS='--max-old-space-size=4096' npm run package -w ui && hc web-app pack workdir --recursive",
+    "package": "rm -f ui/dist.zip && rm -rf ui/dist && yarn build:happ && NODE_OPTIONS='--max-old-space-size=4096' yarn workspace ui package && hc web-app pack workdir --recursive",
     "start:happ": "echo \"starting with admin $VITE_ADMIN_PORT\" && RUST_LOG=warn echo \"pass\" | hc s -f=$VITE_ADMIN_PORT --piped generate workdir/calcy.happ --run=$VITE_APP_PORT -a calcy network -b \"http://127.0.0.1:$BOOTSTRAP_PORT\"  webrtc \"ws://127.0.0.1:$SIGNAL_PORT\"",
-    "build:happ": "npm run build:zomes && hc app pack workdir --recursive",
-    "build:zomes": "RUSTFLAGS='' CARGO_TARGET_DIR=target cargo build --release --target wasm32-unknown-unknown"
+    "build:happ": "yarn run build:zomes && hc app pack workdir --recursive",
+    "build:zomes": "RUSTFLAGS='' CARGO_TARGET_DIR=target cargo build --release --target wasm32-unknown-unknown",
+    "check-hash": "weave hash-webhapp workdir/calcy.webhapp"
+  },
+  "resolutions": {
+    "rxjs": "^7.0.0"
   },
   "devDependencies": {
     "@theweave/cli": "0.13.0-rc.1",
+    "@holochain/hc-spin": "^0.400.0",
     "@holochain-playground/cli": "^0.1.1",
     "@rollup/plugin-typescript": "^8.0.0",
     "@tsconfig/svelte": "^2.0.0",
@@ -36,9 +43,6 @@
     "svelte-preprocess": "^4.10.7",
     "tslib": "^2.0.0",
     "typescript": "^4.0.0"
-  },
-  "engines": {
-    "npm": ">=7.0.0"
   },
   "dependencies": {
     "update": "^0.7.4"
