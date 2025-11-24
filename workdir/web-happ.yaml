@@ -1,7 +1,7 @@
 ---
-manifest_version: "1"
+manifest_version: "0"
 name: calcy
 ui:
-  bundled: "../ui/dist.zip"
-happ_manifest:
-  bundled: "./calcy.happ"
+  path: "../ui/dist.zip"
+happ:
+  path: "./calcy.happ"

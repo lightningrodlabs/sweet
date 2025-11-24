@@ -20,16 +20,17 @@
     "package": "rm -f ui/dist.zip && rm -rf ui/dist && yarn build:happ && NODE_OPTIONS='--max-old-space-size=4096' yarn workspace ui package && hc web-app pack workdir --recursive",
     "start:happ": "echo \"starting with admin $VITE_ADMIN_PORT\" && RUST_LOG=warn echo \"pass\" | hc s -f=$VITE_ADMIN_PORT --piped generate workdir/calcy.happ --run=$VITE_APP_PORT -a calcy network -b \"http://127.0.0.1:$BOOTSTRAP_PORT\"  webrtc \"ws://127.0.0.1:$SIGNAL_PORT\"",
     "build:happ": "yarn run build:zomes && hc app pack workdir --recursive",
-    "build:zomes": "RUSTFLAGS='' CARGO_TARGET_DIR=target cargo build --release --target wasm32-unknown-unknown",
-    "check-hash": "weave hash-webhapp workdir/calcy.webhapp"
+    "build:zomes": "CARGO_TARGET_DIR=target RUSTFLAGS='--cfg getrandom_backend=\"custom\"' cargo build --release --target wasm32-unknown-unknown --workspace",
+    "check-hash": "weave hash-webhapp workdir/calcy.webhapp",
+    "calculate-hashes": "weave hash-webhapp 0.2.0 workdir/calcy.webhapp"
   },
   "resolutions": {
     "rxjs": "^7.0.0"
   },
   "devDependencies": {
-    "@theweave/cli": "0.14.0-rc.0",
-    "@holochain/hc-spin": "^0.500.0-rc.1",
-    "@holochain-playground/cli": "^0.1.1",
+    "@theweave/cli": "0.15.2",
+    "@holochain/hc-spin": "^0.600.0-dev.0",
+    "@holochain-playground/cli": "^0.300.1",
     "@rollup/plugin-typescript": "^8.0.0",
     "@tsconfig/svelte": "^2.0.0",
     "bestzip": "^2.2.0",
