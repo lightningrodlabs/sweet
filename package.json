@@ -22,14 +22,14 @@
     "build:happ": "yarn run build:zomes && hc app pack workdir --recursive",
     "build:zomes": "CARGO_TARGET_DIR=target RUSTFLAGS='--cfg getrandom_backend=\"custom\"' cargo build --release --target wasm32-unknown-unknown --workspace",
     "check-hash": "weave hash-webhapp workdir/calcy.webhapp",
-    "calculate-hashes": "weave hash-webhapp 0.2.0 workdir/calcy.webhapp"
+    "calculate-hashes": "weave hash-webhapp 0.2.1 workdir/calcy.webhapp"
   },
   "resolutions": {
     "rxjs": "^7.0.0"
   },
   "devDependencies": {
-    "@theweave/cli": "0.15.2",
-    "@holochain/hc-spin": "^0.600.0-dev.0",
+    "@theweave/cli": "0.15.9",
+    "@holochain/hc-spin": "^0.600.0",
     "@holochain-playground/cli": "^0.300.1",
     "@rollup/plugin-typescript": "^8.0.0",
     "@tsconfig/svelte": "^2.0.0",

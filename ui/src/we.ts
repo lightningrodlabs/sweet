@@ -69,7 +69,7 @@ export const appletServices: AppletServices = {
       let roleName = recordInfo.roleName;
       if (entryType == "document") {
         const synClient = new SynClient(appletClient, roleName, ZOME_NAME);
-        const synStore = new SynStore(synClient);
+        const synStore = new SynStore(synClient, true);
         const documentHash = wal.hrl[1]
         const docStore = new DocumentStore<BoardState, BoardEphemeralState> (synStore, documentHash)
         const workspaces = await toPromise(docStore.allWorkspaces)
@@ -92,7 +92,7 @@ export const appletServices: AppletServices = {
       searchFilter: string
     ): Promise<Array<WAL>> => {
         const synClient = new SynClient(appletClient, ROLE_NAME, ZOME_NAME);
-        const synStore = new SynStore(synClient);
+        const synStore = new SynStore(synClient, true);
         const boardHashes = asyncDerived(synStore.documentsByTag.get(BoardType.active),x=>Array.from(x.keys()))
             
         const boardData = new LazyHoloHashMap( documentHash => {

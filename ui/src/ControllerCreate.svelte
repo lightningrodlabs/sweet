@@ -45,12 +45,12 @@ let disabled = true
             disabled={disabled}
             on:click={async ()=>{
             try {
-              const synStore = new SynStore(new SynClient(client, roleName));
+              // const synStore = new SynStore(new SynClient(client, roleName));
               //const hrlB64 = hrlWithContextToB64(attachToHrlWithContext)
 
               // const board = await Board.Create(synStore, {/*boundTo:[hrlB64]*/name: inputElement.value})
               const board = await store.boardList.makeBoard({"name": inputElement.value, "type": docType})
-              const dnaHash = await getMyDna(roleName, client)
+              // const dnaHash = await getMyDna(roleName, client)
               const attachment = { hrl: [store.dnaHash, board.hash], context: JSON.stringify({docType: docType}) }
               view.resolve(attachment)
             } catch(e) {
