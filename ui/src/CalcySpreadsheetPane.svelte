@@ -28,7 +28,7 @@ import '@holochain-syn/core/dist/elements/session-participants.js'
 
 import { LogLevel, ILogService, LocaleService, Univer, UniverInstanceType, type JSONXActions, type ICommand, TextXActionType, TextX, JSONX, ICommandService, CommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
 
-import { createUniver, defaultTheme, LocaleType, merge } from '@univerjs/presets'
+import { createUniver, defaultTheme, LocaleType, mergeLocales } from '@univerjs/presets'
 
 import { UniverSheetsCorePreset } from '@univerjs/presets/preset-sheets-core'
 import sheetsCoreEnUS from '@univerjs/presets/preset-sheets-core/locales/en-US'
@@ -293,8 +293,7 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
     const createRes = createUniver({
       locale: LocaleType.EN_US,
       locales: {
-        [LocaleType.EN_US]: merge(
-      {},
+        [LocaleType.EN_US]: mergeLocales(
       sheetsCoreEnUS,
       sheetsConditionalFormattingEnUS,
       sheetsDataValidationEnUS,

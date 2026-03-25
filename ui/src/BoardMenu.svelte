@@ -12,7 +12,7 @@
     import '@univerjs-pro/exchange-client/lib/index.css';
     import { LocaleType, Tools } from '@univerjs/core';
     import ExchangeClientEnUS from '@univerjs-pro/exchange-client/locale/en-US';
-    import { defaultTheme } from '@univerjs/design';
+    import { defaultTheme } from '@univerjs/themes';
     import { onMount } from "svelte";
     
     export let wide = false

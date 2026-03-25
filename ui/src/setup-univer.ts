@@ -5,8 +5,9 @@ import '@univerjs/drawing-ui/lib/index.css'
 import '@univerjs/docs-drawing-ui/lib/index.css'
 
 import type { DocumentDataModel, IDocumentData } from '@univerjs/core'
-import { DocumentFlavor, Tools, LocaleType, LogLevel, Univer, UniverInstanceType, merge } from '@univerjs/core'
-import { defaultTheme } from '@univerjs/design'
+import { DocumentFlavor, Tools, LocaleType, LogLevel, Univer, UniverInstanceType, mergeLocales } from '@univerjs/core'
+import { FUniver } from '@univerjs/core/facade'
+import { defaultTheme } from '@univerjs/themes'
 import { UniverDocsPlugin } from '@univerjs/docs'
 import { UniverDocsUIPlugin } from '@univerjs/docs-ui'
 import { UniverFormulaEnginePlugin } from '@univerjs/engine-formula'
@@ -76,7 +77,7 @@ import { UniverSheetsZenEditorPlugin } from '@univerjs/sheets-zen-editor';
 import { UniverSheetsSortPlugin } from '@univerjs/sheets-sort';
 import { UniverSheetsSortUIPlugin } from '@univerjs/sheets-sort-ui';
 
-// import { FUniver } from '@univerjs/facade'
+// FUniver is imported above from '@univerjs/core/facade'
 import { convertPureStringToUDM } from './util'
 
 import UniverDesignEnUS from '@univerjs/design/locale/en-US'
@@ -90,8 +91,7 @@ import DocsDrawingUIEnUS from '@univerjs/docs-drawing-ui/locale/en-US'
 import ThreadCommentUIEnUS from '@univerjs/thread-comment-ui/locale/en-US';
 
 const locales = {
-    [LocaleType.EN_US]: merge(
-      {},
+    [LocaleType.EN_US]: mergeLocales(
       DesignEnUS,
       UIEnUS,
       DocsUIEnUS,
