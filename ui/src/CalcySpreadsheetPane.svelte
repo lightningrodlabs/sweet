@@ -1,29 +1,30 @@
 <script lang="ts">
-  import { getContext, onMount } from "svelte";
-  import type { CalcyStore } from "./store";
-  import { v1 as uuidv1 } from "uuid";
-  import type {  Board, BoardDelta, BoardProps } from "./board";
-  import EditBoardDialog from "./shared/EditBoardDialog.svelte";
-  import Avatar from "./shared/Avatar.svelte";
-  import { decodeHashFromBase64, type Timestamp } from "@holochain/client";
-  import { cloneDeep, isEqual } from "lodash";
-  import '@shoelace-style/shoelace/dist/components/dropdown/dropdown.js';
-  import '@shoelace-style/shoelace/dist/components/textarea/textarea.js';
-  import ClickEdit from "./ClickEdit.svelte";
-  import SvgIcon from "./shared/SvgIcon.svelte";
-  import { exportBoard } from "./export";
-  import AttachmentsList from './shared/AttachmentsList.svelte';
-  import AttachmentsDialog from "./shared/AttachmentsDialog.svelte"
-  import Participants from "./shared/Participants.svelte";
-  import { deepEqual } from "fast-equals";
-  import { debounce, removeSymbolFields, changeUndefinedToEmptyString, extractActionsFromCommands, extractJSONXFromCommands } from "./util";
+import { getContext, onMount } from "svelte";
+import type { CalcyStore } from "./store";
+import { v1 as uuidv1 } from "uuid";
+import type {  Board, BoardDelta, BoardProps } from "./board";
+import EditBoardDialog from "./shared/EditBoardDialog.svelte";
+import Avatar from "./shared/Avatar.svelte";
+import { decodeHashFromBase64, type Timestamp } from "@holochain/client";
+import { cloneDeep, isEqual } from "lodash";
+import '@shoelace-style/shoelace/dist/components/dropdown/dropdown.js';
+import '@shoelace-style/shoelace/dist/components/textarea/textarea.js';
+import ClickEdit from "./ClickEdit.svelte";
+import SvgIcon from "./shared/SvgIcon.svelte";
+import { exportBoard } from "./export";
+import AttachmentsList from './shared/AttachmentsList.svelte';
+import AttachmentsDialog from "./shared/AttachmentsDialog.svelte"
+import Participants from "./shared/Participants.svelte";
+import { deepEqual } from "fast-equals";
+import { debounce, removeSymbolFields, changeUndefinedToEmptyString, extractActionsFromCommands, extractJSONXFromCommands } from "./util";
 
-  import type { WAL } from "@theweave/api";;
-  import type { IWorkbookData } from '@univerjs/core';
+import type { WAL } from "@theweave/api";;
+import type { IWorkbookData } from '@univerjs/core';
 
-  import "@univerjs/design/lib/index.css";
-  import "@univerjs/ui/lib/index.css";
-  import "@univerjs/sheets-ui/lib/index.css";
+import "@univerjs/design/lib/index.css";
+import "@univerjs/ui/lib/index.css";
+import "@univerjs/sheets-ui/lib/index.css";
+import '@holochain-syn/core/dist/elements/session-participants.js'
 
 import { LogLevel, ILogService, LocaleService, Univer, UniverInstanceType, type JSONXActions, type ICommand, TextXActionType, TextX, JSONX, ICommandService, CommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
 
@@ -198,6 +199,7 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
     let previousState = {};
     $: uiProps = store.uiProps
     $: participants = activeBoard.participants()
+    $: sessionStore = activeBoard.session
     $: activeHashB64 = store.boardList.activeBoardHashB64;
     $: synState = activeBoard.readableState()
     $: if ($synState && univerAPI && sheet) {
@@ -439,14 +441,8 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
         <div class="right-items">
           {#if participants}
             <div class="participants">
-              <div style="display:flex; flex-direction: row">
-                <div style="display:flex; justify-content:flex-end">
-                  <Participants board={activeBoard} max={10}></Participants>
-                </div>
-    
-                <!-- <Avatar agentPubKey={store.myAgentPubKey} showNickname={false} size={30} /> -->
-    
-    
+              <div style="display:flex; flex-direction: row; margin: 3px 0;">
+                <session-participants direction="row" showOffline={true} sessionstore={sessionStore} />
               </div>
             </div>
           {/if}
