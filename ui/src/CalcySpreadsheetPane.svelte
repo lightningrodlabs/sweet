@@ -6,7 +6,7 @@ import type {  Board, BoardDelta, BoardProps } from "./board";
 import EditBoardDialog from "./shared/EditBoardDialog.svelte";
 import Avatar from "./shared/Avatar.svelte";
 import { decodeHashFromBase64, type Timestamp } from "@holochain/client";
-import { cloneDeep, isEqual } from "lodash";
+import { cloneDeep } from "lodash";
 import '@shoelace-style/shoelace/dist/components/dropdown/dropdown.js';
 import '@shoelace-style/shoelace/dist/components/textarea/textarea.js';
 import ClickEdit from "./ClickEdit.svelte";
@@ -54,6 +54,7 @@ import { UniverSheetsHyperLinkPreset } from '@univerjs/presets/preset-sheets-hyp
 import sheetsHyperLinkEnUS from '@univerjs/presets/preset-sheets-hyper-link/locales/en-US'
 import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
 
+import { FDataValidationBuilder } from '@univerjs/sheets-data-validation/facade'
 
 
 
@@ -63,128 +64,214 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
 
 
 
-
-    const delay = ms => new Promise(res => setTimeout(res, ms));
     let sheet;
-    // let funiver;
-  
-    const maybeSave = async () =>{
-      await delay(100)
-      // const previousVersion = JSON.stringify(previousState.spreadsheet)
-      const previousVersion = $synState.spreadsheet
-      const newVersion = sheet.save()
-      // console.log(previousVersion)
-      // console.log("-------------")
-      // console.log(newVersion)
-      // console.log('deep equal', deepEqual(previousVersion.sheets, newVersion.sheets))
-      if (!deepEqual(previousVersion, newVersion)) {
-        console.log("unsaved changes")
-        saveSheet()
-      }
-      // if (previousVersion !== newVersion) {
-        // console.log("unsaved changes")
-        // saveSheet()
-      // }
-    }
-  
+    let applyingRemoteChange = false;
+
+    // Trigger a save for any low-level sheet mutation (covers all user edits)
+
     const updateSheet = async () => {
-      // await delay(100)
-      console.log("updating sheet")
-      const activeSheet = univerAPI.getActiveSheet() //.getActiveWorkbook().getActiveSheet();
-      const spreadsheets = $synState.spreadsheet.sheets
-      // console.log("spreadsheet", spreadsheet)
-      const localState = sheet.save().sheets
-      console.log("current sheet", sheet)
-      console.log("localState", localState)
-      let changed = false;
+      const incoming = $synState.spreadsheet;
+      const local = sheet.save();
+      if (deepEqual(incoming, local)) return;
 
-      // console.log("active sheet", activeSheet.worksheet._worksheet._sheetId)
-      let correspondingSpreadsheet = spreadsheets[activeSheet.worksheet._worksheet._sheetId]
-      // console.log("corresponding spreadsheet", correspondingSpreadsheet.cellData)
-      // fullRange.setValues(correspondingSpreadsheet.cellData)
-  
-      // for each sheet in spreadsheet
-      const sheetpage = activeSheet.worksheet._worksheet._sheetId
-      // for (const sheetpage in spreadsheets) {
-        // console.log("sheet", sheetpage)
-        // let fullRange = activeSheet.worksheet.getRange(1, 1, 1000, 1000);
-        // let fullRange
-        // console.log("fullRange", fullRange)
+      applyingRemoteChange = true;
+      try {
+        const wb = univerAPI.getActiveWorkbook();
+        const localSheets = new Map(wb.getSheets().map(s => [s.getSheetId(), s]));
 
-        let beginRow = null;
-        let endRow = null;
-        let maxRow = 0;
-        let maxCol = 0;
+        // Pre-compute plugin resource maps for per-sheet diffing
+        const findRes = (wb: any, name: string) => (wb.resources ?? []).find((r: any) => r.name === name);
+        const parseRes = (res: any) => res ? JSON.parse((res as any).data || '{}') : {};
 
-        let replacementRange = spreadsheets[sheetpage];
-        console.log("replacementRange", replacementRange)
-  
-        console.log("compromiseValue", localState, sheetpage)
-        let compromiseValue = {...localState[sheetpage].cellData}
-        // for each cell in sheet
-        // console.log("sheet", spreadsheet[sheet].cellData)
-        for (const row in spreadsheets[sheetpage].cellData) {
-          if (compromiseValue[row] === undefined) {
-            compromiseValue[row] = {}
+        const CF_PLUGIN   = 'SHEET_CONDITIONAL_FORMATTING_PLUGIN';
+        const LINK_PLUGIN = 'SHEET_HYPER_LINK_PLUGIN';
+        const IMG_PLUGIN  = 'SHEET_DRAWING_PLUGIN';
+        const DV_PLUGIN   = 'SHEET_DATA_VALIDATION_PLUGIN';
+
+        const inCFBySheet:   Record<string, any[]> = parseRes(findRes(incoming, CF_PLUGIN));
+        const loCFBySheet:   Record<string, any[]> = parseRes(findRes(local,    CF_PLUGIN));
+        const inLinkBySheet: Record<string, any[]> = parseRes(findRes(incoming, LINK_PLUGIN));
+        const loLinkBySheet: Record<string, any[]> = parseRes(findRes(local,    LINK_PLUGIN));
+        const inImgBySheet:  Record<string, any[]> = parseRes(findRes(incoming, IMG_PLUGIN));
+        const loImgBySheet:  Record<string, any[]> = parseRes(findRes(local,    IMG_PLUGIN));
+        const inDVBySheet:   Record<string, any[]> = parseRes(findRes(incoming, DV_PLUGIN));
+        const loDVBySheet:   Record<string, any[]> = parseRes(findRes(local,    DV_PLUGIN));
+
+        // 1. Add new sheets / update existing
+        for (const [sheetId, sheetData] of Object.entries(incoming.sheets) as any[]) {
+          const ws = localSheets.get(sheetId);
+          if (!ws) {
+            wb.insertSheet(sheetData.name, sheetData);
+            continue;
           }
-          // console.log("row", row)
-          for (const col in spreadsheets[sheetpage].cellData[row]) {
-            if (compromiseValue[row][col] === undefined) {
-              compromiseValue[row][col] = {}
-            }
-            // console.log("col", col, row, spreadsheet[sheet].cellData[row][col])
-            const previousValue = compromiseValue[row][col]
-            const newValue = spreadsheets[sheetpage].cellData[row][col]
-            // check if object values in previousValue differ from newValue
-            if (!isEqual(previousValue, newValue)) {
-              const rowNum = Number(row)
-              const colNum = Number(col)
-              console.log(rowNum,colNum,rowNum+1,colNum+1)
-              maxRow = rowNum
-              maxCol = colNum
-              if (!beginRow && !endRow) {
-                beginRow = rowNum
-                endRow = rowNum
+
+          const localSheet = local.sheets[sheetId] ?? {};
+
+          // 2. Cell data — resolve style IDs to inline objects before applying
+          if (!deepEqual(sheetData.cellData, localSheet.cellData)) {
+            const rowCount = sheetData.rowCount ?? 1000;
+            const colCount = sheetData.columnCount ?? 26;
+            const styles = incoming.styles ?? {};
+            const resolved: any = {};
+            for (const [rowKey, row] of Object.entries(sheetData.cellData ?? {}) as any[]) {
+              resolved[rowKey] = {};
+              for (const [colKey, cell] of Object.entries(row as any) as any[]) {
+                if (cell && typeof cell.s === 'string') {
+                  resolved[rowKey][colKey] = { ...cell, s: styles[cell.s] ?? cell.s };
+                } else {
+                  resolved[rowKey][colKey] = cell;
+                }
               }
+            }
+            ws.getRange(0, 0, rowCount - 1, colCount - 1).setValues(resolved);
+          }
 
-              // console.log("replaceement range", sheet, activeSheet.worksheet)
-              // let microRange = sheet.getRange(row, col, row, col);
-              // console.log("microrange", microRange)
-              // microRange.setValue(newValue)
-              compromiseValue[row][col] = newValue
-              changed = true;
-            } //else {
-              // console.log("no update", previousValue.v, newValue.v)
-            // }
+          // 3. Merges — clear all then re-apply from snapshot
+          if (!deepEqual(sheetData.mergeData, localSheet.mergeData)) {
+            ws.getMergeData().forEach(r => r.breakApart());
+            for (const m of (sheetData.mergeData ?? [])) {
+              const numRows = m.endRow - m.startRow + 1;
+              const numCols = m.endColumn - m.startColumn + 1;
+              ws.getRange(m.startRow, m.startColumn, numRows, numCols)
+                .merge({ isForceMerge: true, defaultMerge: true });
+            }
+          }
+
+          // 4. Row heights
+          const inRows = sheetData.rowData ?? {};
+          const loRows = localSheet.rowData ?? {};
+          const rowKeys = new Set([...Object.keys(inRows), ...Object.keys(loRows)].map(Number));
+          for (const rowIdx of rowKeys) {
+            const inH = inRows[rowIdx]?.h;
+            const loH = loRows[rowIdx]?.h;
+            if (inH != null && inH !== loH) ws.setRowHeight(rowIdx, inH);
+          }
+
+          // 5. Column widths
+          const inCols = sheetData.columnData ?? {};
+          const loCols = localSheet.columnData ?? {};
+          const colKeys = new Set([...Object.keys(inCols), ...Object.keys(loCols)].map(Number));
+          for (const colIdx of colKeys) {
+            const inW = inCols[colIdx]?.w;
+            const loW = loCols[colIdx]?.w;
+            if (inW != null && inW !== loW) ws.setColumnWidth(colIdx, inW);
+          }
+
+          // 6. Freeze panes
+          if (!deepEqual(sheetData.freeze, localSheet.freeze)) {
+            const freeze = sheetData.freeze;
+            if (freeze) {
+              const startRow = freeze.startRow ?? 0;
+              const startCol = freeze.startColumn ?? 0;
+              if (freeze.ySplit) ws.setFrozenRows(startRow, startRow + freeze.ySplit);
+              if (freeze.xSplit) ws.setFrozenColumns(startCol, startCol + freeze.xSplit);
+            }
+          }
+
+          // 7. Sheet name
+          if (sheetData.name && sheetData.name !== localSheet.name) {
+            ws.setName(sheetData.name);
+          }
+
+          // 8. Tab color
+          if (sheetData.tabColor !== localSheet.tabColor && sheetData.tabColor != null) {
+            ws.setTabColor(sheetData.tabColor);
+          }
+
+          // 9. Conditional formatting rules
+          const inCFRules = inCFBySheet[sheetId] ?? [];
+          const loCFRules = loCFBySheet[sheetId] ?? [];
+          if (!deepEqual(inCFRules, loCFRules)) {
+            (ws as any).clearConditionalFormatRules?.();
+            for (const rule of inCFRules) {
+              (ws as any).addConditionalFormattingRule?.(rule);
+            }
+          }
+
+          // 10. Hyperlinks — remove stale, update changed, add new
+          const inLinks: any[] = inLinkBySheet[sheetId] ?? [];
+          const loLinks: any[] = loLinkBySheet[sheetId] ?? [];
+          if (!deepEqual(inLinks, loLinks)) {
+            const loLinkMap = new Map(loLinks.map((l: any) => [l.id, l]));
+            const inLinkIds = new Set(inLinks.map((l: any) => l.id));
+            // Cancel links no longer present
+            for (const link of loLinks) {
+              if (!inLinkIds.has(link.id)) {
+                (ws.getRange(link.row, link.column) as any).cancelHyperLink?.(link.id);
+              }
+            }
+            // Add new or update changed links
+            for (const link of inLinks) {
+              const existing = loLinkMap.get(link.id);
+              if (!existing) {
+                await (ws.getRange(link.row, link.column) as any).setHyperLink?.(link.payload, link.display ?? '');
+              } else if (!deepEqual(link, existing)) {
+                await (ws.getRange(link.row, link.column) as any).updateHyperLink?.(link.id, link.payload, link.display ?? '');
+              }
+            }
+          }
+
+          // 11. Drawings/images — delete removed, update changed, insert new
+          const inImgsItem = (inImgBySheet[sheetId] as any) ?? {};
+          const loImgsItem = (loImgBySheet[sheetId] as any) ?? {};
+          const inImgsData: Record<string, any> = inImgsItem.data ?? {};
+          const loImgsData: Record<string, any> = loImgsItem.data ?? {};
+          if (!deepEqual(inImgsData, loImgsData)) {
+            const inImgIds = new Set(Object.keys(inImgsData));
+            const loImgIds = new Set(Object.keys(loImgsData));
+            // Delete drawings no longer present
+            const existingImages: any[] = (ws as any).getImages?.() ?? [];
+            const toDelete = existingImages.filter((img: any) => !inImgIds.has(img.getId?.()));
+            if (toDelete.length) (ws as any).deleteImages?.(toDelete);
+            // Update drawings that exist in both but have changed (resize, move)
+            const toUpdate = Object.values(inImgsData).filter((d: any) =>
+              loImgIds.has(d.drawingId) && !deepEqual(d, loImgsData[d.drawingId])
+            );
+            if (toUpdate.length) (ws as any).updateImages?.(toUpdate);
+            // Insert new drawings
+            const toInsert = Object.values(inImgsData).filter((d: any) => !loImgIds.has(d.drawingId));
+            if (toInsert.length) (ws as any).insertImages?.(toInsert);
+          }
+
+          // 12. Data validation rules — remove, update, add
+          const inDVRules: any[] = inDVBySheet[sheetId] ?? [];
+          const loDVRules: any[] = loDVBySheet[sheetId] ?? [];
+          if (!deepEqual(inDVRules, loDVRules)) {
+            const loDVMap = new Map(loDVRules.map((r: any) => [r.uid, r]));
+            const inDVMap = new Map(inDVRules.map((r: any) => [r.uid, r]));
+            // Remove rules no longer present
+            for (const rule of loDVRules) {
+              if (!inDVMap.has(rule.uid)) {
+                for (const range of (rule.ranges ?? [])) {
+                  ws.getRange(range.startRow, range.startColumn,
+                    range.endRow - range.startRow + 1,
+                    range.endColumn - range.startColumn + 1
+                  ).setDataValidation(null);
+                }
+              }
+            }
+            // Add new or update changed rules
+            for (const rule of inDVRules) {
+              const existing = loDVMap.get(rule.uid);
+              if (!existing || !deepEqual(rule, existing)) {
+                const dvRule = new FDataValidationBuilder(rule).build();
+                for (const range of (rule.ranges ?? [])) {
+                  ws.getRange(range.startRow, range.startColumn,
+                    range.endRow - range.startRow + 1,
+                    range.endColumn - range.startColumn + 1
+                  ).setDataValidation(dvRule);
+                }
+              }
+            }
           }
         }
-  
-        if (changed) {
-          let fullRange = activeSheet.worksheet.getRange(beginRow | 1, endRow | 1, maxRow, maxCol);
-          fullRange.setValues(compromiseValue);
-          // replacementRange.setValues(compromiseValue);
+
+        // 13. Remove deleted sheets
+        for (const [sheetId, ws] of localSheets) {
+          if (!incoming.sheets[sheetId]) wb.deleteSheet(ws);
         }
-      // }
-    }
-  
-    function checkKey(e: any) {
-      if (["Enter", 
-          "Tab", 
-          "ArrowUp", 
-          "ArrowDown", 
-          "ArrowLeft", 
-          "ArrowRight", 
-          "Backspace", 
-          "Delete", 
-          "Escape", 
-          "Home", 
-          "End", 
-          "PageUp", 
-          "PageDown"
-        ].includes(e.key) && !e.shiftKey) {
-      //   e.preventDefault();
-      //   open = false;
-          maybeSave()
+      } finally {
+        applyingRemoteChange = false;
       }
     }
   
@@ -239,22 +326,15 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
   
     const saveSheet = async () => {
       console.log("saving sheet")
-      const sheetData = sheet.save();
-      // console.log("sheetData", sheetData.sheets["sheet-01"])
-      // console.log("sheetData2", sheetData.sheets["sheet-02"])
-      // state.spreadsheet = sheetData;
-      // change state update spreadsheet
+      const rawData = sheet.save();
+      // Strip undefined values — syn CRDT only accepts valid JSON (no undefined)
+      const sheetData = JSON.parse(JSON.stringify(rawData));
       
       let changes: BoardDelta[] = [{
         type: "set-spreadsheet",
         spreadsheet: sheetData
       }]
       activeBoard.requestChanges(changes)
-      // previousState = {...cloneDeep($synState)}
-      // console.log("previous state set", previousState)
-  
-      // const l = await activeBoard.readableState()
-      // console.log("active board", l)
     }
   
     const closeBoard = async () => {
@@ -328,22 +408,10 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
     // sheet = univer.createUniverDoc($synState.spreadsheet);
 
     previousState = cloneDeep($synState)
-    console.log("clonedeep", previousState)
-    window.addEventListener("keydown", checkKey);
-
-    // listen for tab click
-    // window.addEventListener("mousedown", test)
-    // const tabs = document.querySelectorAll('.univer-slide-tab-div');
-    // console.log("tabs", tabs)
-    // tabs.forEach(tab => {
-    //   console.log("tab", tab)
-    //   tab.addEventListener('click', copyWalToPocket)
-    // });
 
     univerAPI.onCommandExecuted((command) => {
-      if (command.id == "sheet.operation.set-worksheet-active") {
-        console.log("command", command)
-        updateSheet()
+      if (!applyingRemoteChange && command.id.startsWith('sheet.mutation.')) {
+        saveSheet();
       }
     })
   });
@@ -365,7 +433,7 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
   <div class="board" >
     <!-- {JSON.stringify($synState.spreadsheet.sheets["sheet-01"])} -->
       <EditBoardDialog bind:this={editBoardDialog}></EditBoardDialog>
-      <div class="top-bar">
+      <!-- <div class="top-bar"> -->
         <div class="left-items">
           {#if standAlone}
             <h2>{$synState.name}</h2>
@@ -391,7 +459,7 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
                   e.target.blur()
                 }
               }}
-              style="font-size: 16px; font-weight: bold; border: none; background: transparent; color: rgba(86, 92, 108, 1.0);"
+              style="font-size: 16px; font-weight: bold; border: none; background: transparent; color: rgba(86, 92, 108, 1.0); width: 120px;"
             />
             <sl-dropdown class="board-options board-menu" skidding=15>
               <sl-button slot="trigger"   class="board-button settings" caret>&nbsp;</sl-button>
@@ -440,18 +508,18 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
         <div class="right-items">
           {#if participants}
             <div class="participants">
-              <div style="display:flex; flex-direction: row; margin: 3px 0;">
+              <div style="display:flex; flex-direction: row; transform: scale(0.8); transform-origin: right center;">
                 <session-participants direction="row" showOffline={true} sessionstore={sessionStore} />
               </div>
             </div>
           {/if}
     
         </div>
-      </div>
+      <!-- </div> -->
     {#if $synState}
     <!-- <button on:click={saveSheet}>Save</button> -->
     <!-- <div id="spreadsheet" style="height:100%; position: relative; top: -32px;"> -->
-     <div id="app" style="height:100vh; position: relative;" on:click={maybeSave}>
+     <div id="app" style="height:100vh; position: relative;">
         <!-- <ReactAdapter
           el={Workbook}
           data={[{ name: "Sheet1", rows:20}]} 
@@ -496,10 +564,16 @@ import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
     .left-items {
       display: flex;
       align-items: center;
+      float: left;
+      position: absolute;
+      z-index: 25;
     }
     .right-items {
       display: flex;
       align-items: center;
+      right: 0;
+      position: absolute;
+      z-index: 25;
     }
   
     sl-button.board-button::part(base) {
