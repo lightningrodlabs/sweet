@@ -72,7 +72,7 @@
 </script>
 
 
-<sl-dialog label="Spreadsheet UI v0.2.1 for DNA v0.10.2" bind:this={dialog} width={600} >
+<sl-dialog label="Spreadsheet UI v0.10.5 for DNA v0.10.2" bind:this={dialog} width={600} >
     <div class="about">
         <p>Spreadsheets is a demonstration Holochain app built by Lightning Rod Labs.</p>
         <p> <b>Developers:</b>

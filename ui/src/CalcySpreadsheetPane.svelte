@@ -97,6 +97,10 @@ import { FDataValidationBuilder } from '@univerjs/sheets-data-validation/facade'
         const inDVBySheet:   Record<string, any[]> = parseRes(findRes(incoming, DV_PLUGIN));
         const loDVBySheet:   Record<string, any[]> = parseRes(findRes(local,    DV_PLUGIN));
 
+        // Remember the currently active sheet so we can restore it after updating non-active sheets.
+        // Univer only re-renders the active sheet, so any sheet with changes must be temporarily activated.
+        const originalActiveSheet = wb.getActiveSheet();
+
         // 1. Add new sheets / update existing
         for (const [sheetId, sheetData] of Object.entries(incoming.sheets) as any[]) {
           const ws = localSheets.get(sheetId);
@@ -106,6 +110,10 @@ import { FDataValidationBuilder } from '@univerjs/sheets-data-validation/facade'
           }
 
           const localSheet = local.sheets[sheetId] ?? {};
+
+          // Activate this sheet if it's not already active so Univer re-renders changes.
+          const isActive = ws.getSheetId() === originalActiveSheet?.getSheetId();
+          if (!isActive) ws.activate();
 
           // 2. Cell data — resolve style IDs to inline objects before applying
           if (!deepEqual(sheetData.cellData, localSheet.cellData)) {
@@ -269,6 +277,11 @@ import { FDataValidationBuilder } from '@univerjs/sheets-data-validation/facade'
         // 13. Remove deleted sheets
         for (const [sheetId, ws] of localSheets) {
           if (!incoming.sheets[sheetId]) wb.deleteSheet(ws);
+        }
+
+        // Restore the originally active sheet (we may have switched away to trigger re-renders)
+        if (originalActiveSheet && originalActiveSheet.getSheetId() !== wb.getActiveSheet()?.getSheetId()) {
+          originalActiveSheet.activate();
         }
       } finally {
         applyingRemoteChange = false;
