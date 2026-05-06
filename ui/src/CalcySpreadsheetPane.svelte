@@ -303,38 +303,7 @@ import { FDataValidationBuilder } from '@univerjs/sheets-data-validation/facade'
     $: activeHashB64 = store.boardList.activeBoardHashB64;
     $: synState = activeBoard.readableState()
     $: if ($synState && univerAPI && sheet) {
-      // console.log("state change", $synState)
-      // console.log("incoming spreadsheet", $synState.spreadsheet)
-      // console.log("unvier api", univerAPI.getActiveSheet().worksheet._worksheet._cellData)
-      
-      // const currentSheetId = univerAPI.getActiveSheet().worksheet._worksheet._sheetId
-      // const sheets = Object.keys($synState.spreadsheet.sheets)
-      // console.log("sheets", sheets)
-      // const newCellData = removeSymbolFields($synState.spreadsheet.sheets[currentSheetId].cellData)
-      // console.log("newCellData", newCellData)
-      
-      
-      // const currentCellData = cloneDeep(univerAPI.getActiveSheet().worksheet._worksheet._cellData._matrix)
-      // console.log("test========", resetMatrix)
-
-      // resetMatrix(currentCellData, newCellData)
-
-      // univerAPI.getActiveSheet().worksheet._worksheet._cellData._matrix = newCellData
-
-      // univerAPI.getActiveSheet().worksheet._worksheet._cellData = test
-
-      // console.log("unvier api", univerAPI.getActiveSheet().worksheet._worksheet._cellData)
-      
-      // const createRES = univerAPI.createWorkbook($synState.spreadsheet);
-      // univerAPI = createRES.univerAPI
-      // univer = createRES.univer
-
       updateSheet()
-
-      // const s = sheet.getActiveSheet()
-      // console.log(sheet.activeSheet())
-      // const activeSheet = univerAPI.getActiveWorkbook().getActiveSheet();
-      // console.log("activeSheet", activeSheet)
     }
   
     const saveSheet = async () => {
