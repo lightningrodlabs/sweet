@@ -62,6 +62,33 @@ export interface BoardAndLatestState {
     tip: EntryHash,
 }
 
+export const createEmptySpreadsheetData = () => {
+        const univerRES = createUniver({
+                locale: LocaleType.EN_US,
+                locales: {
+                    [LocaleType.EN_US]: mergeLocales(
+                        sheetsCoreEnUS,
+                        sheetsConditionalFormattingEnUS,
+                        sheetsDataValidationEnUS,
+                        sheetsDrawingEnUS,
+                        sheetsFilterEnUS,
+                        sheetsHyperLinkEnUS,
+                    ),
+                },
+                theme: defaultTheme,
+                presets: [
+                    UniverSheetsCorePreset(),
+                    UniverSheetsConditionalFormattingPreset(),
+                    UniverSheetsDataValidationPreset(),
+                    UniverSheetsDrawingPreset(),
+                    UniverSheetsFilterPreset(),
+                    UniverSheetsHyperLinkPreset(),
+                ],
+        });
+
+        return univerRES.univerAPI.createWorkbook({}).save();
+}
+
 export class BoardList {
     activeBoardHashes: AsyncReadable<EntryHash[]>
     archivedBoardHashes: AsyncReadable<EntryHash[]>
@@ -239,33 +266,8 @@ export class BoardList {
             options.name = "Untitled"
         }
 
-        const univerRES = createUniver({
-            locale: LocaleType.EN_US,
-            locales: {
-              [LocaleType.EN_US]: mergeLocales(
-            sheetsCoreEnUS,
-            sheetsConditionalFormattingEnUS,
-            sheetsDataValidationEnUS,
-            sheetsDrawingEnUS,
-            sheetsFilterEnUS,
-            sheetsHyperLinkEnUS,
-              ),
-            },
-            theme: defaultTheme,
-            presets: [
-              UniverSheetsCorePreset(),
-              UniverSheetsConditionalFormattingPreset(),
-              UniverSheetsDataValidationPreset(),
-              UniverSheetsDrawingPreset(),
-              UniverSheetsFilterPreset(),
-              UniverSheetsHyperLinkPreset(),
-            ],
-        });
-
-        if (options.type == "spreadsheet") {
-            const newSheet = univerRES.univerAPI.createWorkbook({}) //.createUnit(UniverInstanceType.UNIVER_SHEET, {});
-            console.log("NEW SHEET", newSheet.save())
-            options.spreadsheet = newSheet.save()
+                if (options.type == "spreadsheet" && !options.spreadsheet) {
+                        options.spreadsheet = createEmptySpreadsheetData()
         }
         const board = await Board.Create(this.synStore, options)
         // this.activeBoard.update((n) => {return board} )

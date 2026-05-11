@@ -2,24 +2,19 @@
     import { getContext } from "svelte";
     import type { CalcyStore } from "./store";
     import type {  EntryHash } from '@holochain/client';
-    import GroupParticipants from './GroupParticipants.svelte';
     import NewBoardDialog from './NewBoardDialog.svelte';
     import SvgIcon from "./shared/SvgIcon.svelte";
     import AboutDialog from "./AboutDialog.svelte";
     import LogoIcon from "./icons/LogoIcon.svelte";
     import BoardMenuItem from "./BoardMenuItem.svelte";
     import { BoardType } from "./boardList";
-    import '@univerjs-pro/exchange-client/lib/index.css';
-    import { LocaleType, Tools } from '@univerjs/core';
-    import ExchangeClientEnUS from '@univerjs-pro/exchange-client/locale/en-US';
-    import { defaultTheme } from '@univerjs/themes';
-    import { onMount } from "svelte";
+    import { csvFileNameToBoardName, csvTextToWorkbook } from "./spreadsheetImport";
     
     export let wide = false
 
     let newBoardDialog
     let newBoardDropdown = false
-    let fileInput;
+    let fileInput: HTMLInputElement;
 
     const { getStore } :any = getContext('store');
 
@@ -31,6 +26,28 @@
     $: uiProps = store.uiProps
 
     const bgUrl = "none"
+
+    const importCsvFile = async (event: Event) => {
+        const input = event.currentTarget as HTMLInputElement;
+        const file = input.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        try {
+            const boardName = csvFileNameToBoardName(file.name);
+            const spreadsheet = csvTextToWorkbook(await file.text(), boardName);
+            // @ts-ignore
+            const board = await store.boardList.makeBoard({ name: boardName, type: "spreadsheet", spreadsheet });
+            store.setUIprops({showMenu:false})
+            await store.boardList.setActiveBoard(board.hash)
+        } catch (error) {
+            console.error("Failed to import CSV spreadsheet", error);
+        } finally {
+            input.value = "";
+        }
+    }
 
     const uploadDocument = async (e) => {
         let file = e.target.files[0];
@@ -57,6 +74,10 @@
         // const board = await store.boardList.makeBoard({"name": "Untitled", "type": "spreadsheet"})
         // store.setUIprops({showMenu:false})
         // await store.boardList.setActiveBoard(board.hash)
+    }
+
+    const importSpreadsheet = async () => {
+        fileInput?.click();
     }
 
     const addSpreadsheet = async () => {
@@ -96,7 +117,11 @@
 <AboutDialog bind:this={aboutDialog} />
 <div class="board-menu"
     class:wide={wide} >
-        <div class="new-board new-spreadsheet" on:click={()=>addSpreadsheet()} title="Spreadsheet"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>Spreadsheet</span></div>
+        <div style="display:flex; gap: 15px; align-items: center; width: 100%;">
+            <div class="new-board import-spreadsheet" on:click={()=>importSpreadsheet()} title="Import"><SvgIcon color="white" size=25px icon=csv style="margin-left: 15px;"/><span>Import</span></div>
+            <div class="new-board new-spreadsheet" on:click={()=>addSpreadsheet()} title="Spreadsheet"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>Spreadsheet</span></div>
+        </div>
+        <input style="display:none" type="file" accept=".csv,text/csv" on:change={importCsvFile} bind:this={fileInput}>
 
         <!-- <h3 class="type-header">Boards</h3> -->
         <!-- dropdown new with multiple options -->
@@ -277,6 +302,15 @@
     .new-board:hover {
         cursor: pointer;
         box-shadow: 0px 4px 15px rgba(35, 32, 74, 0.8);
+    }
+
+    .import-spreadsheet {
+        background-color: hsla(241, 40%, 40%, 0.8);
+        width: fit-content;
+    }
+
+    .import-spreadsheet:hover {
+        background-color: hsla(241, 40%, 40%, 1);
     }
 
     .new-spreadsheet {
