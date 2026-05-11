@@ -66,6 +66,27 @@ import { FDataValidationBuilder } from '@univerjs/sheets-data-validation/facade'
 
     let sheet;
     let applyingRemoteChange = false;
+    let commandService;
+    let previousSpreadsheet = null;
+    const appliedCommandIds = new Set<string>();
+
+    const replayPendingCommands = () => {
+      if (!commandService || !$synState?.commands?.length) return;
+
+      const pendingCommands = $synState.commands.filter((command) => !appliedCommandIds.has(command.syncId));
+
+      if (!pendingCommands.length) return;
+
+      applyingRemoteChange = true;
+      try {
+        for (const command of pendingCommands) {
+          (commandService as any).syncExecuteCommand(command.id, command.params, { fromCollab: true, fromChangeset: true });
+          appliedCommandIds.add(command.syncId);
+        }
+      } finally {
+        applyingRemoteChange = false;
+      }
+    };
 
     // Trigger a save for any low-level sheet mutation (covers all user edits)
 
@@ -296,27 +317,34 @@ import { FDataValidationBuilder } from '@univerjs/sheets-data-validation/facade'
     export let activeBoard: Board
     export let standAlone = false
     
-    let previousState = {};
     $: uiProps = store.uiProps
     $: participants = activeBoard.participants()
     $: sessionStore = activeBoard.session
     $: activeHashB64 = store.boardList.activeBoardHashB64;
     $: synState = activeBoard.readableState()
     $: if ($synState && univerAPI && sheet) {
-      updateSheet()
+      if ($synState.spreadsheet !== previousSpreadsheet) {
+        previousSpreadsheet = $synState.spreadsheet;
+        updateSheet()
+      }
+
+      replayPendingCommands()
     }
   
-    const saveSheet = async () => {
-      console.log("saving sheet")
-      const rawData = sheet.save();
-      // Strip undefined values — syn CRDT only accepts valid JSON (no undefined)
-      const sheetData = JSON.parse(JSON.stringify(rawData));
-      
-      let changes: BoardDelta[] = [{
-        type: "set-spreadsheet",
-        spreadsheet: sheetData
-      }]
-      activeBoard.requestChanges(changes)
+    const saveSheetCommand = async (command) => {
+      const syncId = uuidv1();
+      appliedCommandIds.add(syncId);
+
+      activeBoard.requestChanges([
+        {
+          type: "execute-command",
+          command: {
+            syncId,
+            id: command.id,
+            params: JSON.parse(JSON.stringify(command.params ?? {})),
+          },
+        },
+      ]);
     }
   
     const closeBoard = async () => {
@@ -379,21 +407,20 @@ import { FDataValidationBuilder } from '@univerjs/sheets-data-validation/facade'
     univer = createRes.univer
 
     // registerPlugins()
-    // console.log("previous state set", previousState)
     // const savedBoard = await activeBoard.readableState()
-    console.log("syn state", JSON.stringify($synState.spreadsheet))
     // sheet = univer.createUnit(UniverInstanceType.UNIVER_SHEET, $synState.spreadsheet);
     // console.log("savedBoard", savedBoard)
-    console.log("funiver", univerAPI)
     sheet = univerAPI.createWorkbook($synState.spreadsheet);
-    console.log("create sheet result", sheet)
     // sheet = univer.createUniverDoc($synState.spreadsheet);
 
-    previousState = cloneDeep($synState)
+    commandService = (univerAPI as any)._injector.get(ICommandService)
+    previousSpreadsheet = $synState.spreadsheet
+    replayPendingCommands()
 
-    univerAPI.onCommandExecuted((command) => {
+    sheet.onCommandExecuted((command) => {
       if (!applyingRemoteChange && command.id.startsWith('sheet.mutation.')) {
-        saveSheet();
+        console.log("Command executed", command)
+        saveSheetCommand(command);
       }
     })
   });

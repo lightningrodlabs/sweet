@@ -6,6 +6,12 @@ import { BoardType } from "./boardList";
 import type { IWorkbookData } from '@univerjs/core';
 import type { WALUrl } from "./util";
 
+export type SpreadsheetCommand = {
+  syncId: string;
+  id: string;
+  params?: any;
+}
+
 export type BoardProps = {
   bgUrl: string,
   attachments: Array<WALUrl>
@@ -20,8 +26,7 @@ export interface BoardState {
   spreadsheet: IWorkbookData;
   document: IWorkbookData;
   boundTo: Array<WALUrl>;
-  commands: Array<any>;
-  lastAppliedCommand: any;
+  commands: Array<SpreadsheetCommand>;
   commentCommands: Array<any>;
   users: Array<any>;
 }
@@ -45,11 +50,11 @@ export interface BoardState {
       }
     | {
       type: "execute-command";
-      command: any;
+      command: SpreadsheetCommand;
     }
     | {
       type: "execute-command-batch";
-      commands: Array<any>;
+      commands: Array<SpreadsheetCommand>;
       documentValue: IWorkbookData;
     }
     | {
@@ -72,7 +77,6 @@ export interface BoardState {
         spreadsheet: null,
         document: null,
         commands: [],
-        lastAppliedCommand: null,
         commentCommands: [],
         users: []
       }
@@ -87,6 +91,9 @@ export interface BoardState {
       _ephemeralState: any,
       _author: AgentPubKey
     ) {
+      console.log("Applying delta", delta)
+      const time1 = performance.now()
+
       switch (delta.type) {
         case "set-state":
           if (delta.state.name !== undefined) state.name = delta.state.name
@@ -95,7 +102,6 @@ export interface BoardState {
           if (delta.state.props !== undefined) state.props = delta.state.props
           if (delta.state.boundTo !== undefined) state.boundTo = delta.state.boundTo
           if (delta.state.commands !== undefined) state.commands = delta.state.commands
-          if (delta.state.lastAppliedCommand !== undefined) state.lastAppliedCommand = delta.state.lastAppliedCommand
           if (delta.state.users !== undefined) state.users = delta.state.users
           if (delta.state.commentCommands !== undefined) state.commentCommands = delta.state.commentCommands
           break;
@@ -110,18 +116,10 @@ export interface BoardState {
           break;
         case "execute-command":
           state.commands.push(delta.command)
-          if (state.commands.length > 30) {
-            const itemsToRemove = state.commands.length - 30;
-            state.commands.splice(0, itemsToRemove);
-          }
           break;
         case "execute-command-batch":
           state.commands.push(...delta.commands)
           state.spreadsheet = delta.documentValue
-          if (state.commands.length > 40) {
-            const itemsToRemove = state.commands.length - 40;
-            state.commands.splice(0, itemsToRemove);
-          }
           break;
         case "add-user":
           state.users.push(delta.user)
@@ -131,6 +129,9 @@ export interface BoardState {
           state.commentCommands.push(delta.comment)
           break;
       }
+      const time2 = performance.now()
+      console.log(`applyDelta took ${time2 - time1} milliseconds.`)
+
     },
   };
   
@@ -140,7 +141,7 @@ export type BoardStateData = {
 }
   
 export class Board {
-  public session: OTSessionStore<BoardState,BoardEphemeralState> | undefined
+  public session: SessionStore<BoardState,BoardEphemeralState> | undefined
   public hashB64: EntryHashB64
 
   constructor(public document: DocumentStore<BoardState, BoardEphemeralState>, public workspace: WorkspaceStore<BoardState,BoardEphemeralState>) {
@@ -218,13 +219,11 @@ export class Board {
   }
 
   requestChanges(deltas: Array<BoardDelta>) {
-    console.log("requestChanges", deltas)
-      this.session.change((state,_eph)=>{
-        for (const delta of deltas) {
-          console.log("applyDelta", delta)
-          boardGrammar.applyDelta(delta, state,_eph, undefined)
-        }
-      })
+    this.session.change((state,_eph)=>{
+      for (const delta of deltas) {
+        boardGrammar.applyDelta(delta, state,_eph, undefined)
+      }
+    })
   }
 
   sessionParticipants() {
