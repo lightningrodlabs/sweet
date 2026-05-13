@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { isWeContext, type WAL, weaveUrlFromWal } from "@lightningrodlabs/we-applet";
+  import { isWeaveContext, type WAL, weaveUrlFromWal } from "@theweave/api";;
   import { cloneDeep } from "lodash";
-  import type { Board } from "./board";
+  import type { Board } from "../board";
   import { getContext } from "svelte";
-  import type { CalcyStore } from "./store";
+  import type { CalcyStore } from "../store";
   import '@shoelace-style/shoelace/dist/components/button/button.js';
   import '@shoelace-style/shoelace/dist/components/dialog/dialog.js';
   import AttachmentsList from "./AttachmentsList.svelte";
   import SvgIcon from "./SvgIcon.svelte";
-  import type { WALUrl } from "./util";
+  import type { WALUrl } from "../util";
 
   const { getStore } :any = getContext("store");
   let store: CalcyStore = getStore();
@@ -38,7 +38,7 @@
   }
 
   const addAttachment = async () => {
-    const wal = await store.weClient.userSelectWal()
+    const wal = await store.weClient.assets.userSelectAsset()
     if (wal) {
       _addAttachment(wal)
     }
@@ -69,7 +69,7 @@
 </script>
 
 <sl-dialog label={"Board Links"} bind:this={dialog}>
-  {#if isWeContext()}
+  {#if isWeaveContext()}
   <AttachmentsList attachments={attachments}
       on:remove-attachment={(e)=>removeAttachment(e.detail)}/>
 

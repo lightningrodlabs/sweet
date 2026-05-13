@@ -2,16 +2,19 @@
     import { getContext } from "svelte";
     import type { CalcyStore } from "./store";
     import type {  EntryHash } from '@holochain/client';
-    import GroupParticipants from './GroupParticipants.svelte';
     import NewBoardDialog from './NewBoardDialog.svelte';
-    import SvgIcon from "./SvgIcon.svelte";
+    import SvgIcon from "./shared/SvgIcon.svelte";
     import AboutDialog from "./AboutDialog.svelte";
     import LogoIcon from "./icons/LogoIcon.svelte";
     import BoardMenuItem from "./BoardMenuItem.svelte";
     import { BoardType } from "./boardList";
+    import { csvFileNameToBoardName, csvTextToWorkbook } from "./spreadsheetImport";
+    
     export let wide = false
 
     let newBoardDialog
+    let newBoardDropdown = false
+    let fileInput: HTMLInputElement;
 
     const { getStore } :any = getContext('store');
 
@@ -24,6 +27,79 @@
 
     const bgUrl = "none"
 
+    const importCsvFile = async (event: Event) => {
+        const input = event.currentTarget as HTMLInputElement;
+        const file = input.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        try {
+            const boardName = csvFileNameToBoardName(file.name);
+            const spreadsheet = csvTextToWorkbook(await file.text(), boardName);
+            // @ts-ignore
+            const board = await store.boardList.makeBoard({ name: boardName, type: "spreadsheet", spreadsheet });
+            store.setUIprops({showMenu:false})
+            await store.boardList.setActiveBoard(board.hash)
+        } catch (error) {
+            console.error("Failed to import CSV spreadsheet", error);
+        } finally {
+            input.value = "";
+        }
+    }
+
+    const uploadDocument = async (e) => {
+        let file = e.target.files[0];
+        let reader = new FileReader();
+
+        reader.addEventListener("load", async () => {
+            console.log(reader.result as string)
+            // const importedBoardStates = deserializeExport(reader.result as string)
+            // if ( importedBoardStates.length > 0) {
+            //     const boards:Array<Board> = []
+            //     for (const b of importedBoardStates) {
+            //         boards.push(await store.boardList.makeBoard(b))
+            //     }
+            //     if (importedBoardStates.length == 1) {
+            //         store.setUIprops({showMenu:false})
+            //         store.setActiveBoard(boards[0].hash)
+            //     }
+            // }
+            // importing = false
+        }, false);
+        // importing = true
+        // reader.readAsText(file);
+        // @ts-ignore
+        // const board = await store.boardList.makeBoard({"name": "Untitled", "type": "spreadsheet"})
+        // store.setUIprops({showMenu:false})
+        // await store.boardList.setActiveBoard(board.hash)
+    }
+
+    const importSpreadsheet = async () => {
+        fileInput?.click();
+    }
+
+    const addSpreadsheet = async () => {
+        // @ts-ignore
+        const board = await store.boardList.makeBoard({"name": "Untitled", "type": "spreadsheet"})
+        store.setUIprops({showMenu:false})
+        await store.boardList.setActiveBoard(board.hash)
+    }
+
+    const addDocument = async () => {
+        // @ts-ignore
+        const board = await store.boardList.makeBoard({"name": "Untitled", "type": "document"})
+        store.setUIprops({showMenu:false})
+        await store.boardList.setActiveBoard(board.hash)
+    }
+
+    const addPresentation = async () => {
+        // @ts-ignore
+        const board = await store.boardList.makeBoard({"name": "Untitled", "type": "presentation"})
+        store.setUIprops({showMenu:false})
+        await store.boardList.setActiveBoard(board.hash)
+    }
 
     const selectBoard = async (hash: EntryHash) => {
         store.setUIprops({showMenu:false})
@@ -36,24 +112,51 @@
     }
 
     let aboutDialog
-
 </script>
 
 <AboutDialog bind:this={aboutDialog} />
 <div class="board-menu"
     class:wide={wide} >
+        <div style="display:flex; gap: 15px; align-items: center; width: 100%;">
+            <div class="new-board import-spreadsheet" on:click={()=>importSpreadsheet()} title="Import"><SvgIcon color="white" size=25px icon=csv style="margin-left: 15px;"/><span>Import</span></div>
+            <div class="new-board new-spreadsheet" on:click={()=>addSpreadsheet()} title="Spreadsheet"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>Spreadsheet</span></div>
+        </div>
+        <input style="display:none" type="file" accept=".csv,text/csv" on:change={importCsvFile} bind:this={fileInput}>
 
-    <GroupParticipants/>
-        <h3 class="type-header">Boards</h3>
+        <!-- <h3 class="type-header">Boards</h3> -->
+        <!-- dropdown new with multiple options -->
+        <!-- <div style="position: absolute; z-index: 1; margin: 3px;" on:mouseenter={()=>newBoardDropdown = true} on:mouseleave={()=>newBoardDropdown = false}> -->
+            <!-- <div class="new-board dropdown-button"  title="New"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>New</span></div> -->
+            <!-- {#if newBoardDropdown} -->
+                <!-- <div class="new-board new-spreadsheet" on:click={()=>addSpreadsheet()} title="Spreadsheet"><SvgIcon color="white" size=25px icon=spreadsheet style="margin-left: 15px;"/><span>Spreadsheet</span></div> -->
+                <!-- <div class="new-board new-doc" on:click={()=>addDocument()} title="Document"><SvgIcon color="white" size=25px icon=textDocument style="margin-left: 15px;"/><span>Document</span></div> -->
+                <!-- <div class="new-board" on:click={()=>{}} title="Presentation"><SvgIcon color="white" size=25px icon=presentation style="margin-left: 15px;"/><span>Presentation <small style="font-size: 11px; line-height: 12px; top: -5px; position: relative;">(comming soon)</small></span></div> -->
+                <!-- <div class="new-board" on:click={()=>{fileInput.click();}} title="Import"><SvgIcon color="white" size=25px icon=faUpload style="margin-left: 15px;"/><span>Import</span></div>
+                <input style="display:none" type="file" accept=".docx" on:change={(e)=>uploadDocument(e)} bind:this={fileInput} > -->
+                <!-- upload/import -->
+                <!-- <div class="new-board" on:click={()=>uploadDocument()} title="Upload"><SvgIcon color="white" size=25px icon=faFileImport style="margin-left: 15px;"/><span>Import file</span></div> -->
+            <!-- {/if} -->
+        <!-- </div> -->
+
+        <!-- <div style="margin-top: 60px;"></div> -->
+        <!-- <GroupParticipants/> -->
+
+        <!-- <div class="new-board" on:click={()=>newBoardDialog.open()} title="New Spreadsheet"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>New Spreadsheet</span></div> -->
         <div class="boards-section">
-            <div class="new-board" on:click={()=>newBoardDialog.open()} title="New Spreadsheet"><SvgIcon color="white" size=25px icon=faSquarePlus style="margin-left: 15px;"/><span>New Spreadsheet</span></div>
             {#if $activeBoards.status == "complete" && $activeBoards.value.length > 0}
                 {#each $activeBoards.value as hash}
                     <div
-                        on:click={()=>selectBoard(hash)}
+                        on:click={()=> {
+                            selectBoard(hash)
+                        }
+                        }
                         class="board" >
-                        <BoardMenuItem boardType={BoardType.active} boardHash={hash}></BoardMenuItem>
-                        <div class="board-bg" style="background-image: url({bgUrl});"></div>
+                        <BoardMenuItem boardType={BoardType.active} boardHash={hash}
+                            on:select={()=>{
+                                // selectBoard(hash)
+                            }}
+                        ></BoardMenuItem>
+                        <!-- <div class="board-bg" style="background-image: url({bgUrl});"></div> -->
                     </div>
                 {/each}
             {/if}
@@ -105,7 +208,7 @@
         class:slideOut={$uiProps.showMenu == false}
         on:click={()=>aboutDialog.open()}>   
         <div class="logo" title="About Calcy!"><LogoIcon /></div>
-        <div class="cog"><SvgIcon icon=faCog size="20px" color="#fff"/></div>
+        <div class="cog"><SvgIcon icon=faCog size="18px" color="#fff"/></div>
     </div>
 </div>
 
@@ -114,6 +217,7 @@
         width: 100%;
     }
     .boards-section {
+        margin-top: 7px;
         display: flex;
         flex-wrap: wrap;
     }
@@ -129,7 +233,8 @@
         flex-direction: column;
         /* background: linear-gradient(94.53deg, #164B9A 12.76%, #5B47D6 99.41%); */
         /* background: linear-gradient(94.53deg, #2b2e31 12.76%, #545454 99.41%); */
-        background: linear-gradient(94.53deg, #81878e 12.76%, #c2c2c2 99.41%);
+        /* background: linear-gradient(94.53deg, #81878e 12.76%, #c2c2c2 99.41%); */
+        background-color: rgb(239, 239, 239);
         flex: 0 0 auto;
         align-items: flex-start;
         position: relative;
@@ -178,10 +283,9 @@
     .new-board {
         box-sizing: border-box;
         position: relative;
-        width: 290px;
+        width: 168px;
         height: 50px;
-        /* background: rgba(24, 55, 122, 1.0); */
-        background: rgb(229, 183, 0);
+        background: #4f336be6;
         border: 1px solid #4A559D;
         color: #fff;
         display: flex;
@@ -190,20 +294,48 @@
         font-size: 16px;
         font-weight: bold;
         transition: all .25s ease;
-        top: 3px;
+        left: 5px;
         padding: 15px 0;
         box-shadow: 0px 4px 8px rgba(35, 32, 74, 0);
     }
 
     .new-board:hover {
         cursor: pointer;
-        padding: 15px 5px;
-        width: 300px;
-        border: 1px solid #252d5d;
-        /* background: rgb(10, 25, 57); */
-        background: rgb(252, 202, 0);
-        margin: 0 -5px 0 -5px;
         box-shadow: 0px 4px 15px rgba(35, 32, 74, 0.8);
+    }
+
+    .import-spreadsheet {
+        background-color: hsla(241, 40%, 40%, 0.8);
+        width: fit-content;
+    }
+
+    .import-spreadsheet:hover {
+        background-color: hsla(241, 40%, 40%, 1);
+    }
+
+    .new-spreadsheet {
+        background-color: hsla(270, 54%, 44%, 0.8);
+    }
+
+    .new-spreadsheet:hover {
+        background-color: hsla(270, 47%, 38%, 1);
+    }
+
+    .new-doc {
+        background-color: hsl(232, 36%, 45%, 0.8);
+    }
+
+    .new-doc:hover {
+        background-color: hsl(232, 36%, 45%, 1);
+    }
+
+    .new-board.dropdown-button {
+        cursor: default;
+        width: 168px;
+        padding: 15px 0;
+        margin: 0;
+        border: 1px solid #4A559D;
+        box-shadow: none;
     }
 
     .new-board span {
@@ -213,32 +345,39 @@
     }
 
     .board {
-        width: 290px;
+        /* width: 290px; */
+        width: 200px;
         border-radius: 5px;
         padding: 10px;
-        margin: 5px;
-        transition: all .25s ease;
-        border: 1px solid;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgb(200 221 237) 100%);
+        margin: 7px;
+        transition: all .15s ease;
+        /* border: 1px solid; */
+        background: rgb(202, 202, 216);
         position: relative;
         display: block;
-        box-shadow: 0px 4px 8px rgba(35, 32, 74, 0.8);
+        /* box-shadow: 0px 4px 8px rgba(167, 165, 189, 0.8); */
     }
 
     .board:hover {
+        cursor: pointer;
+        z-index: 100;
+        background:  rgb(173, 169, 177);
+    }
+
+    /* .board:hover {
         cursor: pointer;
         z-index: 100;
         padding: 15px;
         width: 300px;
         background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 1) 100%);
         margin: 0 -10px 0 -5px;
-        box-shadow: 0px 4px 14px rgba(35, 32, 74, 0.8);
+        box-shadow: 0px 4px 14px rgba(167, 165, 189, 0.8);
         z-index: 100;
     }
 
     .wide .board:hover {
-        margin: 0 0 0 0;
-    }
+        margin: 0 4px 0 0;
+    } */
 
     .footer {
         position: fixed;
@@ -246,11 +385,11 @@
         border-radius: 0;
         bottom: 0px;
         height: 40px;
-        display: block;
+        display: flex;
         align-items: center;
         width: 330px;
         left: 0;
-        background-color: rgba(23, 55, 123, .9);
+        background-color: #5c00eae6;
         animation-duration: .3s;
         animation-name: slideIn;
         animation-iteration-count: 1;
@@ -296,8 +435,9 @@
     }
 
     .logo {
-        height: 16px;
+        height: 18px;
         margin-right: 5px;
+        margin-top: 1px;
     }
 
     .board-bg {

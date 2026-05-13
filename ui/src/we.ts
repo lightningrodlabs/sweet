@@ -2,10 +2,10 @@ import { DocumentStore, SynClient, SynStore, WorkspaceStore } from '@holochain-s
 import type { BoardEphemeralState, BoardState } from './board';
 import { asyncDerived, pipe, sliceAndJoin, toPromise } from '@holochain-open-dev/stores';
 import { BoardType } from './boardList';
-import { LazyHoloHashMap } from '@holochain-open-dev/utils';
-import type { AppletHash, AppletServices, AssetInfo, WAL, WeServices } from '@lightningrodlabs/we-applet';
+import type { AppletHash, AppletServices, AssetInfo, RecordInfo, WAL, WeaveServices } from '@theweave/api';
 import { getMyDna } from './util';
-import type { AppAgentClient, RoleName, ZomeName } from '@holochain/client';
+import type { AppClient, RoleName, LazyHoloHashMap } from '@holochain/client';
+
 
 const ROLE_NAME = "calcy"
 const ZOME_NAME = "syn"
@@ -31,13 +31,20 @@ const SHEET_ICON_SRC = `data:image/svg+xml;utf8,
 </g>
 </svg>`
 
+const textDocumentIcon = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--!Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zM256 0V128H384L256 0zM112 256H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16z" fill="%234A559D"/></svg>`
+const spreadsheetIcon = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><path d="M32 32C14.3 32 0 46.3 0 64v384c0 17.7 14.3 32 32 32h320c17.7 0 32-14.3 32-32V64c0-17.7-14.3-32-32-32H32zm32 64h64v64H64V96zm0 96h64v64H64v-64zm0 96h64v64H64v-64zm96-192h128v64H160V96zm0 96h128v64H160v-64zm0 96h128v64H160v-64zm0 96h128v64H160v-64z" fill="%238e31ebe6"/></svg>`
+
 export const appletServices: AppletServices = {
     // Types of attachment that this Applet offers for other Applets to be created
     creatables: {
       'spreadsheet': {
         label: "Spreadsheet",
-        icon_src: SHEET_ICON_SRC,
-      }
+        icon_src: spreadsheetIcon,
+      },
+      // 'document': {
+      //   label: "Document",
+      //   icon_src: textDocumentIcon,
+      // }
     },
     // Types of UI widgets/blocks that this Applet supports
     blockTypes: {
@@ -48,29 +55,29 @@ export const appletServices: AppletServices = {
         view: "applet-view",
       },      
     },
-    bindAsset: async (appletClient: AppAgentClient,
-      srcWal: WAL, dstWal: WAL): Promise<void> => {
-      console.log("Bind requested.  Src:", srcWal, "  Dst:", dstWal)
-    },
+    // bindAsset: async (appletClient: AppClient,
+    //   srcWal: WAL, dstWal: WAL): Promise<void> => {
+    //   console.log("Bind requested.  Src:", srcWal, "  Dst:", dstWal)
+    // },
     getAssetInfo: async (
-      appletClient: AppAgentClient,
-      roleName: RoleName,
-      integrityZomeName: ZomeName,
-      entryType: string,
-      wal: WAL
+      appletClient: AppClient,
+      wal: WAL,
+      recordInfo: RecordInfo,
     ): Promise<AssetInfo | undefined> => {
+      let entryType = recordInfo.entryType;
+      let roleName = recordInfo.roleName;
       if (entryType == "document") {
         const synClient = new SynClient(appletClient, roleName, ZOME_NAME);
-        const synStore = new SynStore(synClient);
+        const synStore = new SynStore(synClient, true);
         const documentHash = wal.hrl[1]
         const docStore = new DocumentStore<BoardState, BoardEphemeralState> (synStore, documentHash)
         const workspaces = await toPromise(docStore.allWorkspaces)
         const workspace = new WorkspaceStore(docStore, Array.from(workspaces.keys())[0])
         const latestState = await toPromise(workspace.latestState)
-
+        const docType = JSON.parse(wal.context).docType
 
         return {
-          icon_src: SHEET_ICON_SRC,
+          icon_src: docType == "document" ? textDocumentIcon : spreadsheetIcon,
           name: latestState.name,
         };
       } else {
@@ -78,13 +85,13 @@ export const appletServices: AppletServices = {
       }
     },
     search: async (
-      appletClient: AppAgentClient,
+      appletClient: AppClient,
       appletHash: AppletHash,
-      weServices: WeServices,
+      weaveServices: WeaveServices,
       searchFilter: string
     ): Promise<Array<WAL>> => {
         const synClient = new SynClient(appletClient, ROLE_NAME, ZOME_NAME);
-        const synStore = new SynStore(synClient);
+        const synStore = new SynStore(synClient, true);
         const boardHashes = asyncDerived(synStore.documentsByTag.get(BoardType.active),x=>Array.from(x.keys()))
             
         const boardData = new LazyHoloHashMap( documentHash => {
@@ -107,14 +114,17 @@ export const appletServices: AppletServices = {
 
         const allBoards = Array.from((await toPromise(allBoardsAsync)).entries())
         const dnaHash = await getMyDna(ROLE_NAME, appletClient)
+        const searchText = searchFilter.toLowerCase()
 
-        return allBoards
+        let hrls: Array<WAL> = allBoards
             .filter((r) => !!r)
             .filter((r) => {
                 const state = r[1]
-                return state.name.toLowerCase().includes(searchFilter.toLowerCase())
+                return state.name.toLowerCase().includes(searchText)
             })
             .map((r) => ({ hrl: [dnaHash, r![0]], context: undefined }));
+        
+        return hrls
     },
 };
   

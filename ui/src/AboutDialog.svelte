@@ -1,7 +1,7 @@
 <script lang="ts">
     import { getContext } from "svelte";
     import '@shoelace-style/shoelace/dist/components/dialog/dialog.js';
-    import SvgIcon from "./SvgIcon.svelte";
+    import SvgIcon from "./shared/SvgIcon.svelte";
     import type { CalcyStore } from "./store";
     import {asyncDerived, toPromise} from '@holochain-open-dev/stores'
     import { BoardType } from "./boardList";
@@ -72,9 +72,9 @@
 </script>
 
 
-<sl-dialog label="Calcy!: UI v0.3.1 for DNA v0.3.0" bind:this={dialog} width={600} >
+<sl-dialog label="Spreadsheet UI v0.10.6 for DNA v0.10.2" bind:this={dialog} width={600} >
     <div class="about">
-        <p>Xylem! is a demonstration Holochain app built by Lightning Rod Labs.</p>
+        <p>Spreadsheets is a demonstration Holochain app built by Lightning Rod Labs.</p>
         <p> <b>Developers:</b>
             Check out this hApp's source-code <a href="https://github.com/lightningrodlabs/calcy">in our github repo</a>.
             This project's real-time syncronization is powered by <a href="https://github.com/holochain/syn">Syn</a>, 
@@ -82,7 +82,7 @@
         </p>
     <p class="small">Copyright © 2023,2024 Holochain Foundation &amp; Lightning Rod Labs.  This software is distributed under the MIT License</p>
     {#if importing}
-        <div class="export-import" title="Import Boards">
+        <div class="export-import" title="Import Documents">
             <div class="spinning" style="margin:auto"><SvgIcon icon=faSpinner color="#fff"></SvgIcon></div>
         </div>
     {:else}
@@ -91,17 +91,18 @@
         </div>
     {/if}
     {#if exporting}
-        <div class="export-import" title="Import Boards">
+        <div class="export-import" title="Import Documents">
             <div class="spinning" style="margin:auto"><SvgIcon icon=faSpinner  color="#fff"></SvgIcon></div>
         </div>
     {:else}
-        <div class="export-import" on:click={()=>{exportAllBoards()}} title="Export All Boards"><SvgIcon color="#fff" icon=faFileExport size=20px style="margin-left: 15px;"/><span>Export All Boards</span></div>
+        <div class="export-import" on:click={()=>{exportAllBoards()}} title="Export All Documents"><SvgIcon color="#fff" icon=faFileExport size=20px style="margin-left: 15px;"/><span>Export All Documents</span></div>
     {/if}
 
 
     {#if $allBoards.status == "pending"}
         <div class="spinning" ><SvgIcon icon=faSpinner  color="#fff"></SvgIcon></div>
     {:else if $allBoards.status == "complete"}
+        <br>
         <sl-dropdown skidding=15>
             <sl-button slot="trigger" caret><SvgIcon icon=faClone size=20px style="margin-right: 10px"/><span>New Spreadsheet From </span></sl-button>
             <sl-menu>

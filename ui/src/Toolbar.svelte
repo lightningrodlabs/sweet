@@ -4,7 +4,7 @@
   import Search from './Search.svelte';
   import { getContext } from "svelte";
   import type { CalcyStore } from "./store";
-  import SvgIcon from "./SvgIcon.svelte";
+  import SvgIcon from "./shared/SvgIcon.svelte";
 
   const { getStore } :any = getContext("store");
   let store: CalcyStore = getStore();
@@ -29,7 +29,7 @@
   <div class="items"><Search></Search></div>
   <div class="items">
     <Folk></Folk>
-    <a href="https://github.com/holochain-apps/calcy/issues" title="Report a problem in our GitHub repo" target="_blank">
+    <a href="https://github.com/lightningrodlabs/calcy/issues" title="Report a problem in our GitHub repo" target="_blank">
       <div class="nav-button"><SvgIcon color="#fff" icon="faBug" size=20px /></div>
     </a>
   </div>
@@ -51,7 +51,7 @@
   .toolbar {
     /* background: linear-gradient(90.1deg, #143C77 4.43%, #261492 99.36%); */
     /* background: black; */
-    background: linear-gradient(90.1deg, #555555 4.43%, #8c8c8c 99.36%);
+    background: linear-gradient(90.1deg, rgb(34 30 59) 4.43%, #7888ff 99.36%);
     align-items: center;
     justify-content: space-between;
     color: #fff;

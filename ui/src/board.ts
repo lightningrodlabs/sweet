@@ -6,6 +6,12 @@ import { BoardType } from "./boardList";
 import type { IWorkbookData } from '@univerjs/core';
 import type { WALUrl } from "./util";
 
+export type SpreadsheetCommand = {
+  syncId: string;
+  id: string;
+  params?: any;
+}
+
 export type BoardProps = {
   bgUrl: string,
   attachments: Array<WALUrl>
@@ -15,9 +21,14 @@ export type BoardEphemeralState = { [key: string]: string };
 
 export interface BoardState {
   name: string;
+  type: string;
   props: BoardProps;
   spreadsheet: IWorkbookData;
-  boundTo: Array<WALUrl>
+  document: IWorkbookData;
+  boundTo: Array<WALUrl>;
+  commands: Array<SpreadsheetCommand>;
+  commentCommands: Array<any>;
+  users: Array<any>;
 }
   
   export type BoardDelta =
@@ -36,16 +47,38 @@ export interface BoardState {
     | {
         type: "set-props";
         props: BoardProps;
-      };
+      }
+    | {
+      type: "execute-command";
+      command: SpreadsheetCommand;
+    }
+    | {
+      type: "execute-command-batch";
+      commands: Array<SpreadsheetCommand>;
+      documentValue: IWorkbookData;
+    }
+    | {
+      type: "add-user";
+      user: any;
+    }
+    | {
+      type: "add-comment";
+      comment: any;
+    };
 
 
   export const boardGrammar = {
     initialState(init: Partial<BoardState>|undefined = undefined)  {
       const state: BoardState = {
         name: "untitled",
+        type: init?.type || "document",
         props: {bgUrl:"", attachments:[]},
         boundTo: [],
-        spreadsheet: null
+        spreadsheet: null,
+        document: null,
+        commands: [],
+        commentCommands: [],
+        users: []
       }
       if (init) {
         Object.assign(state, init);
@@ -58,12 +91,19 @@ export interface BoardState {
       _ephemeralState: any,
       _author: AgentPubKey
     ) {
+      console.log("Applying delta", delta)
+      const time1 = performance.now()
+
       switch (delta.type) {
         case "set-state":
           if (delta.state.name !== undefined) state.name = delta.state.name
+          if (delta.state.type !== undefined) state.type = delta.state.type
           if (delta.state.spreadsheet !== undefined) state.spreadsheet = delta.state.spreadsheet
           if (delta.state.props !== undefined) state.props = delta.state.props
           if (delta.state.boundTo !== undefined) state.boundTo = delta.state.boundTo
+          if (delta.state.commands !== undefined) state.commands = delta.state.commands
+          if (delta.state.users !== undefined) state.users = delta.state.users
+          if (delta.state.commentCommands !== undefined) state.commentCommands = delta.state.commentCommands
           break;
         case "set-spreadsheet":
           state.spreadsheet = delta.spreadsheet
@@ -74,7 +114,24 @@ export interface BoardState {
         case "set-props":
           state.props = delta.props
           break;
+        case "execute-command":
+          state.commands.push(delta.command)
+          break;
+        case "execute-command-batch":
+          state.commands.push(...delta.commands)
+          state.spreadsheet = delta.documentValue
+          break;
+        case "add-user":
+          state.users.push(delta.user)
+          break;
+        case "add-comment":
+          if (!state.commentCommands) {state.commentCommands = []}
+          state.commentCommands.push(delta.comment)
+          break;
       }
+      const time2 = performance.now()
+      console.log(`applyDelta took ${time2 - time1} milliseconds.`)
+
     },
   };
   
@@ -98,6 +155,12 @@ export class Board {
 
     await synStore.client.tagDocument(documentStore.documentHash, BoardType.active)
 
+    if (init.type === "spreadsheet") {
+      await synStore.client.tagDocument(documentStore.documentHash, BoardType.spreadsheet)
+    } else if (init.type === "document") {
+      await synStore.client.tagDocument(documentStore.documentHash, BoardType.document)
+    }
+
     const workspaceStore = await documentStore.createWorkspace(
         `${new Date}`,
         undefined
@@ -118,6 +181,8 @@ export class Board {
       }
     }
 
+    await me.leave()
+
     return me
   }
 
@@ -126,16 +191,14 @@ export class Board {
   }
 
   async join() {
-    if (! this.session) 
+    if (!this.session) 
       this.session = await this.workspace.joinSession()
-    console.log("JOINED", this.session)
   }
   
   async leave() {
     if (this.session) {
       this.session.leaveSession()
       this.session = undefined
-      console.log("LEFT SESSION")
     }
   }
 
@@ -156,11 +219,11 @@ export class Board {
   }
 
   requestChanges(deltas: Array<BoardDelta>) {
-      this.session.change((state,_eph)=>{
-        for (const delta of deltas) {
-          boardGrammar.applyDelta(delta, state,_eph, undefined)
-        }
-      })
+    this.session.change((state,_eph)=>{
+      for (const delta of deltas) {
+        boardGrammar.applyDelta(delta, state,_eph, undefined)
+      }
+    })
   }
 
   sessionParticipants() {

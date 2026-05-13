@@ -1,17 +1,19 @@
 <script lang="ts">
-    import CalcyPane from './CalcyPane.svelte'
+    import CalcySpreadsheetPane from './CalcySpreadsheetPane.svelte';
     import { CalcyStore } from './store'
     import { setContext } from 'svelte';
-    import type { AppAgentClient, EntryHash } from '@holochain/client';
-    import type { SynStore } from '@holochain-syn/store';
+    import type { AppClient, EntryHash } from '@holochain/client';
+    import type { SynStore } from '@holochain-syn/core';
     import type { ProfilesStore } from "@holochain-open-dev/profiles";
-    import type { WeClient } from '@lightningrodlabs/we-applet';
+    import type { WeaveClient } from "@theweave/api";;
+    import { onMount } from 'svelte';
 
     export let roleName = ""
-    export let client : AppAgentClient
-    export let weClient : WeClient
+    export let client : AppClient
+    export let weClient : WeaveClient
     export let profilesStore : ProfilesStore
     export let board : EntryHash
+    let resetVar = true;
 
     let store: CalcyStore = new CalcyStore (
       weClient,
@@ -22,7 +24,11 @@
     let synStore: SynStore = store.synStore
     store.boardList.setActiveBoard(board)
     $: activeBoardHash = store.boardList.activeBoardHash
+    $: boardData = $activeBoardHash ? store.boardList.boardData2.get($activeBoardHash) : null
     $: activeBoard = store.boardList.activeBoard
+    $: participants = $activeBoard ? $activeBoard.sessionParticipants() : undefined
+    $: profiles = $participants ? profilesStore.allProfiles : undefined
+    $: profile = profilesStore.profiles.get(client.myPubKey)
 
     setContext('synStore', {
       getStore: () => synStore,
@@ -31,9 +37,27 @@
     setContext('store', {
       getStore: () => store,
     });
+
+    function resetPane() {
+      resetVar = false
+      setTimeout(() => {
+        resetVar = true
+      }, 10)
+    }
+
     const DEFAULT_KD_BG_IMG = "none"
     //const DEFAULT_KD_BG_IMG = "https://img.freepik.com/free-photo/studio-background-concept-abstract-empty-light-gradient-purple-studio-room-background-product-plain-studio-background_1258-54461.jpg"
     const NO_BOARD_IMG = "none"
+
+    let show = false;
+    onMount(() => {
+      // set timeout
+      setTimeout(() => {
+        show = true;
+        store.boardList.setActiveBoard(board)
+        resetPane()
+      }, 100);
+    })
 
     $: bgUrl = DEFAULT_KD_BG_IMG  // FIXME$activeBoard ?   ($activeBoard.state.props && $boardState.props.bgUrl) ? $boardState.props.bgUrl : DEFAULT_KD_BG_IMG
   </script>
@@ -43,14 +67,30 @@
 
       <div class="wrapper">
 
-      <div class="workspace" style="display:flex">
+      <div class="workspace" style="display:flex">        
+        {#if show && $participants?.status == "complete"}
+          {#if $profile?.status == "complete"}
+            {#if $profiles?.status == "complete"}
+              {#if $activeBoardHash !== undefined && profiles}
+                {#if resetVar && $boardData.status == "complete"}
+                  {#if $boardData.value.latestState.type === "spreadsheet"}
+                    <CalcySpreadsheetPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value} tabView={true}/>
+                    <!-- <SpreadsheetPane activeBoard={$activeBoard} participants={$participants.value} profiles={profiles.value} myProfile={$profile.value} tabView={true}/> -->
+                  {:else if $boardData.value.latestState.type === "document"}
+                    <!-- <CalcyPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value} tabView={true}/> -->
+                      <DocumentPane activeBoard={$activeBoard} participants={$participants.value} profiles={profiles.value} myProfile={$profile.value} tabView={true}/>
+                    {/if}                
+                {/if}
+              {/if}
+            {/if}
+          {/if}
+        {/if}
 
-
-        {#if $activeBoardHash !== undefined}
+        <!-- {#if $activeBoardHash !== undefined}
           <CalcyPane activeBoard={$activeBoard} standAlone={true}/>
         {:else}
           Unable to find board.
-        {/if}
+        {/if} -->
         </div>
         </div>
     </div>

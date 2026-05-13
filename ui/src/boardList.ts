@@ -1,31 +1,53 @@
-import { HoloHashMap, LazyHoloHashMap } from "@holochain-open-dev/utils";
 import { derived, get, writable, type Readable, type Writable } from "svelte/store";
-import { type AgentPubKey, type EntryHash, type EntryHashB64, encodeHashToBase64 } from "@holochain/client";
+import { type AgentPubKey, type EntryHash, type EntryHashB64, encodeHashToBase64, HoloHashMap, LazyHoloHashMap } from "@holochain/client";
 import {toPromise, type AsyncReadable, pipe, joinAsync, asyncDerived, sliceAndJoin, alwaysSubscribed} from '@holochain-open-dev/stores'
 import { SynStore, WorkspaceStore } from "@holochain-syn/core";
 import type { ProfilesStore } from "@holochain-open-dev/profiles";
 import { cloneDeep } from "lodash";
 import { Board, type BoardDelta, type BoardState } from "./board";
-import { hashEqual } from "./util";
+import { hashEqual, convertPureStringToUDM } from "./util";
 
-import { LocaleType, type IWorkbookData } from '@univerjs/core';
-import { enUS as UniverDesignEnUS } from '@univerjs/design';
-// import { enUS as UniverDocsUIEnUS } from '@univerjs/docs-ui';
-import { enUS as UniverSheetsEnUS } from '@univerjs/sheets';
-import { enUS as UniverSheetsUIEnUS } from '@univerjs/sheets-ui';
-import { enUS as UniverUiEnUS } from '@univerjs/ui';
-import {Univer } from "@univerjs/core";
-import { defaultTheme } from "@univerjs/design";
-import { UniverDocsPlugin } from "@univerjs/docs";
-import { UniverFormulaEnginePlugin } from "@univerjs/engine-formula";
-import { UniverRenderEnginePlugin } from "@univerjs/engine-render";
-import { UniverSheetsPlugin } from "@univerjs/sheets";
-import { UniverSheetsFormulaPlugin } from "@univerjs/sheets-formula";
-import { UniverSheetsUIPlugin } from "@univerjs/sheets-ui";
-import { UniverUIPlugin } from "@univerjs/ui";
+
+import { LogLevel, ILogService, LocaleService, Univer, UniverInstanceType, type JSONXActions, type ICommand, TextXActionType, TextX, JSONX, ICommandService, CommandService, UserManagerService , Tools, IUniverInstanceService, MemoryCursor, type DocumentDataModel} from '@univerjs/core';
+
+import { createUniver, defaultTheme, LocaleType, mergeLocales } from '@univerjs/presets'
+
+import { UniverSheetsCorePreset } from '@univerjs/presets/preset-sheets-core'
+import sheetsCoreEnUS from '@univerjs/presets/preset-sheets-core/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-core.css'
+
+import { UniverSheetsConditionalFormattingPreset } from '@univerjs/presets/preset-sheets-conditional-formatting'
+import sheetsConditionalFormattingEnUS from '@univerjs/presets/preset-sheets-conditional-formatting/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-conditional-formatting.css'
+
+import { UniverSheetsDataValidationPreset } from '@univerjs/presets/preset-sheets-data-validation'
+import sheetsDataValidationEnUS from '@univerjs/presets/preset-sheets-data-validation/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-data-validation.css'
+
+import { UniverSheetsDrawingPreset } from '@univerjs/presets/preset-sheets-drawing'
+import sheetsDrawingEnUS from '@univerjs/presets/preset-sheets-drawing/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-drawing.css'
+
+import { UniverSheetsFilterPreset } from '@univerjs/presets/preset-sheets-filter'
+import sheetsFilterEnUS from '@univerjs/presets/preset-sheets-filter/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-filter.css'
+
+import { UniverSheetsHyperLinkPreset } from '@univerjs/presets/preset-sheets-hyper-link'
+import sheetsHyperLinkEnUS from '@univerjs/presets/preset-sheets-hyper-link/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-hyper-link.css'
+
+
+
+
+
+
+
 
 export enum BoardType {
     active = "active",
+    spreadsheet = "activespreadsheet",
+    document = "document",
+    presentation = "presentation",
     archived = "archived"
 }
 
@@ -40,6 +62,33 @@ export interface BoardAndLatestState {
     tip: EntryHash,
 }
 
+export const createEmptySpreadsheetData = () => {
+        const univerRES = createUniver({
+                locale: LocaleType.EN_US,
+                locales: {
+                    [LocaleType.EN_US]: mergeLocales(
+                        sheetsCoreEnUS,
+                        sheetsConditionalFormattingEnUS,
+                        sheetsDataValidationEnUS,
+                        sheetsDrawingEnUS,
+                        sheetsFilterEnUS,
+                        sheetsHyperLinkEnUS,
+                    ),
+                },
+                theme: defaultTheme,
+                presets: [
+                    UniverSheetsCorePreset(),
+                    UniverSheetsConditionalFormattingPreset(),
+                    UniverSheetsDataValidationPreset(),
+                    UniverSheetsDrawingPreset(),
+                    UniverSheetsFilterPreset(),
+                    UniverSheetsHyperLinkPreset(),
+                ],
+        });
+
+        return univerRES.univerAPI.createWorkbook({}).save();
+}
+
 export class BoardList {
     activeBoardHashes: AsyncReadable<EntryHash[]>
     archivedBoardHashes: AsyncReadable<EntryHash[]>
@@ -48,14 +97,16 @@ export class BoardList {
     allBoards: AsyncReadable<ReadonlyMap<Uint8Array, BoardAndLatestState>>
     activeBoardHash: Writable<EntryHash| undefined> = writable(undefined)
     activeBoardHashB64: Readable<string| undefined> = derived(this.activeBoardHash, s=> s ? encodeHashToBase64(s): undefined)
+    activeWorkspaceHash: Writable<EntryHash| undefined> = writable(undefined)
+    activeWorkspaceHashB64: Readable<string| undefined> = derived(this.activeWorkspaceHash, s=> s ? encodeHashToBase64(s): undefined)
     boardCount: AsyncReadable<number>
 
     boardData2 = new LazyHoloHashMap( documentHash => {
         const docStore = this.synStore.documents.get(documentHash)
-
         const board = pipe(docStore.allWorkspaces,
             workspaces => 
-                new Board(docStore,  new WorkspaceStore(docStore, Array.from(workspaces.keys())[0]))
+                // new Board(docStore,  new WorkspaceStore(docStore, (get(this.activeWorkspaceHash) || Array.from(workspaces.keys())[0])))
+            new Board(docStore, new WorkspaceStore(docStore, Array.from(workspaces.keys())[0]))
         )
         const latestState = pipe(board, 
             board => board.workspace.latestState
@@ -63,10 +114,8 @@ export class BoardList {
         const tip = pipe(board,
             board => board.workspace.tip
             )
-        console.log("boardData2:main")
-        return alwaysSubscribed(pipe(joinAsync([board, latestState, tip]), ([board, latestState, tip]) => {return {board,latestState, tip: tip ? tip.entryHash: undefined}}))
+        return alwaysSubscribed(pipe(joinAsync([tip, latestState, board]), ([tip, latestState, board]) => {return {board, latestState, tip: tip ? tip.entryHash : undefined}}))
     })
-
 
     agentBoardHashes: LazyHoloHashMap<AgentPubKey, AsyncReadable<Array<BoardAndLatestState>>> = new LazyHoloHashMap(agent =>
         pipe(this.activeBoardHashes,
@@ -81,7 +130,6 @@ export class BoardList {
                         //agentDocuments.push(asyncDerived(state, state=>{return {hash, state}}))
                         const x = this.boardData2.get(hash)
                         if (x) {
-                            console.log("agentBoardHashes")
                             agentBoardHashes.push(x)
                         }
                     }
@@ -97,7 +145,6 @@ export class BoardList {
     constructor(public profilseStore: ProfilesStore, public synStore: SynStore) {
         this.allAgentBoards = pipe(this.profilseStore.agentsWithProfile,
             agents=>{
-                console.log("allAgentBoards")
                 return sliceAndJoin(this.agentBoardHashes, agents, {errors: "filter_out"})
             }
         )
@@ -145,18 +192,28 @@ export class BoardList {
         return board.board
     }
 
-    async setActiveBoard(hash: EntryHash | undefined) : Promise<Board | undefined> {
+    async setActiveBoard(hash: EntryHash | undefined, workspaceHash?: EntryHash | undefined) : Promise<Board | undefined> {
         let board: Board | undefined = undefined
         const current = get(this.activeBoard)
+        const currentWorkspaceHash = get(this.activeWorkspaceHash)
         // if no change then don't update
         if (!current && !hash) return
-        if (current && hash && hashEqual(hash, current.hash)) return
+        if (current && hash && hashEqual(hash, current.hash) && hashEqual(workspaceHash, currentWorkspaceHash)) return
 
         if (hash) {
-            board = (await toPromise(this.boardData2.get(hash))).board
+            let board: Board | undefined = undefined
+            if (workspaceHash) {
+                const documentStore = this.synStore.documents.get(hash)
+                const workspaceStore = new WorkspaceStore(documentStore, workspaceHash)
+                board = await new Board(this.synStore.documents.get(hash), workspaceStore)
+                console.log("WORKSPACE", board)
+            } else {
+                board = (await toPromise(this.boardData2.get(hash))).board
+                console.log("NO WORKSPACE", board)
+            }
             if (board) {
+                let sessionParticipants = await toPromise(board.sessionParticipants())
                 await board.join()
-                console.log("joined")
                 this.activeBoard.update((n) => {return board} )
             } else {
                 console.log("NO BOARD")
@@ -165,6 +222,7 @@ export class BoardList {
             this.activeBoard.update((n) => {return undefined} )
         }
         this.activeBoardHash.update((n) => {return hash} )
+        this.activeWorkspaceHash.update((n) => {return workspaceHash} )
 
         return board
     }
@@ -205,50 +263,14 @@ export class BoardList {
 
     async makeBoard(options: BoardState) : Promise<Board> {
         if (!options.name) {
-            options.name = "untitled"
-        }
-        
-        const univer = new Univer({
-          theme: defaultTheme,
-          locale: LocaleType.EN_US,
-          locales: {
-            [LocaleType.EN_US]: {
-              ...UniverSheetsEnUS,
-              ...UniverSheetsUIEnUS,
-              ...UniverUiEnUS,
-              ...UniverDesignEnUS,
-            },
-          }
-        });
-      
-        // core plugins
-        univer.registerPlugin(UniverRenderEnginePlugin);
-        univer.registerPlugin(UniverFormulaEnginePlugin);
-        univer.registerPlugin(UniverUIPlugin, {
-            container: "spreadsheet",
-            header: true,
-            toolbar: true,
-            footer: true,
-        });
-    
-        // doc plugins
-        univer.registerPlugin(UniverDocsPlugin, {
-            hasScroll: false,
-        });
-    
-        // sheet plugins
-        univer.registerPlugin(UniverSheetsPlugin);
-        univer.registerPlugin(UniverSheetsUIPlugin);
-        univer.registerPlugin(UniverSheetsFormulaPlugin);
-
-        let newSheet = univer.createUniverSheet({});
-
-        if (!options.spreadsheet) {
-            options.spreadsheet = newSheet.save()
+            options.name = "Untitled"
         }
 
-        // console.log("options", options)
+                if (options.type == "spreadsheet" && !options.spreadsheet) {
+                        options.spreadsheet = createEmptySpreadsheetData()
+        }
         const board = await Board.Create(this.synStore, options)
+        // this.activeBoard.update((n) => {return board} )
         return board
     }
 }

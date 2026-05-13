@@ -19,8 +19,8 @@ import type { v1 as uuidv1 } from "uuid";
 import { get, writable, type Unsubscriber, type Writable } from "svelte/store";
 import type { ProfilesStore } from '@holochain-open-dev/profiles';
 import type { BoardState } from './board';
-import type { WeClient } from '@lightningrodlabs/we-applet';
-import { HoloHashMap } from '@holochain-open-dev/utils';
+import type { WeClient } from "@theweave/api";;
+import { HoloHashMap } from '@holochain/client';
 import { getMyDna } from './util';
 
 
@@ -82,7 +82,7 @@ export class CalcyStore {
           this.roleName,
           this.zomeName
         );
-        this.synStore = new SynStore(new SynClient(this.client,this.roleName,this.zomeName))
+        this.synStore = new SynStore(new SynClient(this.client,this.roleName,this.zomeName), true)
         this.boardList = new BoardList(profilesStore, this.synStore)
         this.boardList.activeBoard.subscribe((board)=>{
             if (this.unsub) {
@@ -134,8 +134,9 @@ export class CalcyStore {
         })
     }
 
-    async setActiveBoard(hash: EntryHash | undefined) {
-        const board = await this.boardList.setActiveBoard(hash)
+    async setActiveBoard(hash: EntryHash | undefined, workspaceHash?: EntryHash) {
+        console.log("setActiveBoard", hash, workspaceHash)
+        const board = await this.boardList.setActiveBoard(hash, workspaceHash)
         // let bgUrl = ""
         // if (board) {
         //     const state = board.state()

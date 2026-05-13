@@ -2,10 +2,10 @@
   import Controller from './Controller.svelte'
   import ControllerBoard from './ControllerBoard.svelte'
   import ControllerBlockActiveBoards from './ControllerBlockActiveBoards.svelte'
-  import { AppAgentWebsocket, AdminWebsocket } from '@holochain/client';
+  import { AppWebsocket, AdminWebsocket } from '@holochain/client';
   import '@shoelace-style/shoelace/dist/themes/light.css';
   import 'highlight.js/styles/github.css';
-  import { WeClient, isWeContext, initializeHotReload, type WAL} from '@lightningrodlabs/we-applet';
+  import { WeaveClient, isWeaveContext, initializeHotReload, type WAL} from "@theweave/api";;
   import { ProfilesClient, ProfilesStore } from '@holochain-open-dev/profiles';
   import "@holochain-open-dev/profiles/dist/elements/profiles-context.js";
   import "@holochain-open-dev/profiles/dist/elements/profile-prompt.js";
@@ -13,6 +13,7 @@
   import LogoIcon from "./icons/LogoIcon.svelte";
   import { appletServices } from './we';
   import ControllerCreate from './ControllerCreate.svelte'
+  import Sync from './Sync.svelte';
 
   const appId = import.meta.env.VITE_APP_ID ? import.meta.env.VITE_APP_ID : 'calcy'
   const roleName = 'calcy'
@@ -20,8 +21,8 @@
   const adminPort = import.meta.env.VITE_ADMIN_PORT
   const url = `ws://localhost:${appPort}`;
 
-  let client: AppAgentWebsocket
-  let weClient: WeClient
+  let client: AppWebsocket
+  let weClient: WeaveClient
   let profilesStore : ProfilesStore|undefined = undefined
   let createView
 
@@ -31,6 +32,7 @@
     App,
     WAL,
     CreateSpreadsheet,
+    CreateDocument,
     BlockActiveBoards
   }
 
@@ -48,23 +50,37 @@
         console.warn("Could not initialize applet hot-reloading. This is only expected to work in a We context in dev mode.")
       }
     }
-    if (!isWeContext()) {
+    let tokenResp;
+    if (!isWeaveContext()) {
         console.log("adminPort is", adminPort)
         if (adminPort) {
           const url = `ws://localhost:${adminPort}`
           const adminWebsocket = await AdminWebsocket.connect({url: new URL(url)})
-          const x = await adminWebsocket.listApps({})
-          console.log("apps", x)
-          const cellIds = await adminWebsocket.listCellIds()
-          console.log("CELL IDS",cellIds)
-          await adminWebsocket.authorizeSigningCredentials(cellIds[0])
+          console.log("issuing token");
+          tokenResp = await adminWebsocket.issueAppAuthenticationToken({
+            installed_app_id: appId,
+          });
+          console.log("token", tokenResp);
+          const x = await adminWebsocket.listApps({});
+          console.log("apps", x);
+          const cellIds = await adminWebsocket.listCellIds();
+          console.log("CELL IDS", cellIds);
+          await adminWebsocket.authorizeSigningCredentials(cellIds[0]);
         }
-        console.log("appPort and Id is", appPort, appId)
-        client = await AppAgentWebsocket.connect(appId, {url: new URL(url)})
+        console.log("appPort and Id is", appPort, appId);
+        // const params: AppWebsocketConnectionOptions = { url: new URL(url) };
+        const params = { url: new URL(url) };
+        console.log("params", params);
+        if (tokenResp) params.token = tokenResp.token;
+        console.log("connecting to app port at:", params.url);
+        client = await AppWebsocket.connect(params);
+        console.log("client", client);
         profilesClient = new ProfilesClient(client, appId);
     }
     else {
-      weClient = await WeClient.connect(appletServices);
+      weClient = await WeaveClient.connect(appletServices);
+
+      console.log("render type", weClient.renderInfo.view.name)
 
       switch (weClient.renderInfo.type) {
         case "applet-view":
@@ -82,21 +98,28 @@
               }
               break;
             case "creatable":
-            switch (weClient.renderInfo.view.name) {
-                case "spreadsheet":
+              switch (weClient.renderInfo.view.name) {
+                case "Spreadsheet":
                   renderType = RenderType.CreateSpreadsheet
                   createView = weClient.renderInfo.view
-              }              
+                  break;
+                case "Document":
+                  renderType = RenderType.CreateDocument
+                  createView = weClient.renderInfo.view
+              }
               break;
             case "asset":
-              switch (weClient.renderInfo.view.roleName) {
+              switch (weClient.renderInfo.view.recordInfo.roleName) {
                 case "calcy":
-                  switch (weClient.renderInfo.view.integrityZomeName) {
+                  switch (weClient.renderInfo.view.recordInfo.integrityZomeName) {
                     case "syn_integrity":
-                      switch (weClient.renderInfo.view.entryType) {
+                      switch (weClient.renderInfo.view.recordInfo.entryType) {
                         case "document":
                           renderType = RenderType.WAL
                           wal = weClient.renderInfo.view.wal
+                          break;
+                        case "spreadsheet":
+                          renderType = RenderType.WAL
                           break;
                         default:
                           throw new Error("Unknown entry type:"+weClient.renderInfo.view.entryType);
@@ -161,10 +184,12 @@
    Error when loading profile: {$prof.error}
   {:else}
     {#if renderType== RenderType.CreateSpreadsheet}
-      <ControllerCreate  view={createView} client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerCreate>
+      <ControllerCreate docType="spreadsheet" view={createView} client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerCreate>
+    {:else if renderType== RenderType.CreateDocument}
+      <ControllerCreate docType="document" view={createView} client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerCreate>
     {:else if renderType== RenderType.App}
       <Controller  client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></Controller>
-    {:else if  renderType== RenderType.WAL && !wal.context}
+    {:else if  renderType== RenderType.WAL}
       <ControllerBoard  board={wal.hrl[1]} client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerBoard>
     {:else if  renderType== RenderType.BlockActiveBoards}
       <ControllerBlockActiveBoards client={client} weClient={weClient} profilesStore={profilesStore} roleName={roleName}></ControllerBlockActiveBoards>
@@ -172,9 +197,11 @@
   {/if}
 
 </profiles-context>
+<!-- <Sync client={client}/> -->
 {:else}
 <div class="loading"><div class="loader"></div></div>
 {/if}
+
 
 <style>
 .welcome-text {
