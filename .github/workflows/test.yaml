@@ -3,9 +3,9 @@ on:
   # Trigger the workflow on push or pull request,
   # but only for the main branch
   push: 
-    branches: [ main, develop ]
+    branches: [ main, develop, main-0.6, main-0.7 ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, main-0.6, main-0.7 ]
 
 jobs:
   testbuild:

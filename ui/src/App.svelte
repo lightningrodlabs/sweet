@@ -33,6 +33,8 @@
     WAL,
     CreateSpreadsheet,
     CreateDocument,
+    // Unreachable since Holochain 0.7 / @theweave/api 0.7 removed the 'block'
+    // AppletView. Kept so the enum ordinals above do not shift.
     BlockActiveBoards
   }
 
@@ -88,15 +90,13 @@
             case "main":
               // here comes your rendering logic for the main view
               break;
-            case "block":
-              switch(weClient.renderInfo.view.block) {
-                case "active_boards":
-                  renderType = RenderType.BlockActiveBoards
-                  break;
-                default:
-                  throw new Error("Unknown applet-view block type:"+weClient.renderInfo.view.block);
-              }
-              break;
+            // NOTE (Holochain 0.7 / @theweave/api 0.7): the 'block' AppletView was
+            // removed. AppletView is now main | asset | creatable, so this arm can
+            // never be reached and `renderInfo.view.block` no longer exists.
+            // RenderType.BlockActiveBoards and ControllerBlockActiveBoards.svelte are
+            // kept (enum ordinals must not shift) but are now unreachable: the
+            // 'active_boards' block is a genuinely lost Moss surface, not dead code
+            // that was never wired up.
             case "creatable":
               switch (weClient.renderInfo.view.name) {
                 case "Spreadsheet":
@@ -138,12 +138,16 @@
           }
           break;
         case "cross-applet-view":
+          // FIXME: pre-existing bug, unchanged by the 0.7 upgrade. `this` is not the
+          // component instance inside this module-scope function, so `this.weClient`
+          // is undefined at runtime and typed `any` at compile time — which is also
+          // why TypeScript never flagged the 'block' case this switch used to carry
+          // (removed here, since CrossGroupView is { type: 'main' } only in 0.7).
+          // Every arm falls through to the throw, so this view has never worked.
+          // ui/weave.config.json sets crossGroupView: false, so Moss does not request it.
           switch (this.weClient.renderInfo.view.type) {
             case "main":
               // here comes your rendering logic for the cross-applet main view
-              //break;
-            case "block":
-              //
               //break;
             default:
               throw new Error("Unknown cross-applet-view render type.")
