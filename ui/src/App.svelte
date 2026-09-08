@@ -224,7 +224,15 @@
 create-profile {
   box-shadow: 0px 10px 10px rgba(0, 0, 0, .15);
 }
+:global(html) {
+  height: 100%;
+}
 :global(body) {
+  /* Was content-sized, so nothing below could resolve a percentage height and
+     the only thing holding the sheet open was a 100vh max-height on .board.
+     That works in a full applet window and collapses in Moss's embed and asset
+     frames, which are short. */
+  height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;

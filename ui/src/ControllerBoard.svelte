@@ -67,14 +67,14 @@
 
       <div class="wrapper">
 
-      <div class="workspace" style="display:flex">        
+      <div class="workspace" style="display:flex; flex:1 1 auto; min-height:0">        
         {#if show && $participants?.status == "complete"}
           {#if $profile?.status == "complete"}
             {#if $profiles?.status == "complete"}
               {#if $activeBoardHash !== undefined && profiles}
                 {#if resetVar && $boardData.status == "complete"}
                   {#if $boardData.value.latestState.type === "spreadsheet"}
-                    <CalcySpreadsheetPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value} tabView={true}/>
+                    <CalcySpreadsheetPane on:reset={() => resetPane()} activeBoard={$activeBoard} tabView={true}/>
                     <!-- <SpreadsheetPane activeBoard={$activeBoard} participants={$participants.value} profiles={profiles.value} myProfile={$profile.value} tabView={true}/> -->
                   {:else if $boardData.value.latestState.type === "document"}
                     <!-- <CalcyPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value} tabView={true}/> -->
@@ -99,13 +99,18 @@
 <style>
   .app {
     margin: 0;
-    padding-bottom: 10px;
     background-size: cover;
     display: flex;
     flex-direction: column;
     min-height: 0;
     background-color: #fff;
-    height: 100vh;
+    /* was padding-bottom: 10px -- with the global `* { box-sizing: border-box }`
+       that came out of the content box, leaving a 10px dead strip under the
+       sheet footer in every view. */
+    /* 100% of .flex-scrollable-container (inset: 0), not of the viewport.
+       100vh overflowed its own box by however much the container fell short,
+       which is the couple of stray pixels of scrollbar in the main view. */
+    height: 100%;
     position: relative;
   }
 
@@ -143,6 +148,14 @@
   .wrapper {
     position: relative;
     z-index: 10;
+    /* .wrapper sits between .app and .workspace and was a plain block with no
+       height and no flex, so the flex chain died here: .workspace could not
+       fill, .board had no height to take, and the Univer container collapsed to
+       nothing -- leaving only its content-sized footer in the embed view. */
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
 </style>

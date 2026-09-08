@@ -67,7 +67,7 @@
         <Toolbar
           profilesStore={profilesStore}/>
       </div>
-      <div class="workspace" style="display:flex">
+      <div class="workspace" style="display:flex; flex:1 1 auto; min-height:0">
       {#if $uiProps.showMenu && $boardCount.status == "complete"}
         {#if $activeBoardHash === undefined}
          <div class="board-menu" >
@@ -112,13 +112,18 @@
 <style>
   .app {
     margin: 0;
-    padding-bottom: 10px;
     background-size: cover;
     display: flex;
     flex-direction: column;
     min-height: 0;
     background-color: #fff;
-    height: 100vh;
+    /* was padding-bottom: 10px -- with the global `* { box-sizing: border-box }`
+       that came out of the content box, leaving a 10px dead strip under the
+       sheet footer in every view. */
+    /* 100% of .flex-scrollable-container (inset: 0), not of the viewport.
+       100vh overflowed its own box by however much the container fell short,
+       which is the couple of stray pixels of scrollbar in the main view. */
+    height: 100%;
     position: relative;
   }
 
@@ -206,6 +211,14 @@
   .wrapper {
     position: relative;
     z-index: 10;
+    /* .wrapper sits between .app and .workspace and was a plain block with no
+       height and no flex, so the flex chain died here: .workspace could not
+       fill, .board had no height to take, and the Univer container collapsed to
+       nothing -- leaving only its content-sized footer in the embed view. */
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   /* .my-boards {

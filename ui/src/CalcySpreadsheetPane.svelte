@@ -456,6 +456,9 @@ const removeAttachment = (props: BoardProps, idx: number) => {
 let univerAPI;
 let univer;
 
+// Embeds start as a bare grid; this reveals the toolbar and the formula bar.
+let showEmbedControls = false;
+
 onMount(async () => {
   const createRes = createUniver({
     locale: LocaleType.EN_US,
@@ -471,6 +474,10 @@ onMount(async () => {
     },
     theme: defaultTheme,
     presets: [
+      // The header stays mounted even in an embed, so its parts can be toggled
+      // at runtime -- `header: false` would remove the DOM and there would be
+      // nothing to show again. What an embed displays is decided by CSS below,
+      // keyed on Univer's stable data-u-comp hooks.
       UniverSheetsCorePreset(),
       UniverSheetsConditionalFormattingPreset(),
       UniverSheetsDataValidationPreset(),
@@ -518,10 +525,18 @@ const test = () => {
   }
 
 </script>
-<div class="board" >
+<div class="board" class:embed={tabView} class:show-controls={showEmbedControls}>
   <!-- {JSON.stringify($synState.spreadsheet.sheets["sheet-01"])} -->
     <EditBoardDialog bind:this={editBoardDialog}></EditBoardDialog>
+    {#if tabView}
+      <button
+        class="embed-controls-toggle"
+        title={showEmbedControls ? "Hide the toolbar and formula bar" : "Show the toolbar and formula bar"}
+        on:click={() => showEmbedControls = !showEmbedControls}
+      >{showEmbedControls ? "\u2013" : "\u22ef"}</button>
+    {/if}
     <!-- <div class="top-bar"> -->
+    {#if !tabView}
       <div class="left-items">
         {#if standAlone}
           <h2>{$synState.name}</h2>
@@ -603,11 +618,12 @@ const test = () => {
         {/if}
   
       </div>
+    {/if}
     <!-- </div> -->
   {#if $synState}
   <!-- <button on:click={saveSheet}>Save</button> -->
   <!-- <div id="spreadsheet" style="height:100%; position: relative; top: -32px;"> -->
-    <div id="app" style="height:100vh; position: relative;">
+    <div id="app" style="flex: 1 1 auto; min-height: 0; position: relative;">
       <!-- <ReactAdapter
         el={Workbook}
         data={[{ name: "Sheet1", rows:20}]} 
@@ -620,6 +636,44 @@ const test = () => {
   .univer-menubar {
     height: 0px !important;
   }
+
+  /* Embedded and asset views render a bare grid. `data-u-comp` is Univer's own
+     stable hook -- `ribbon-header-menu` is the Start/Insert/Formulas/Data tab
+     row, `ribbon-toolbar` the control strip under it, `formula-bar` the cell
+     reference and fx line. The tab row stays hidden; the other two are what the
+     toggle shows. */
+  .board.embed :global([data-u-comp="ribbon-header-menu"]) {
+    display: none !important;
+  }
+  /* `headerbar` is the wrapper the toolbar sits in. Hiding only its children
+     left it in the layout as an empty white strip -- the exact row an embed is
+     trying to save -- so collapse the wrapper itself. */
+  .board.embed:not(.show-controls) :global([data-u-comp="headerbar"]),
+  .board.embed:not(.show-controls) :global([data-u-comp="ribbon-toolbar"]),
+  .board.embed:not(.show-controls) :global([data-u-comp="formula-bar"]) {
+    display: none !important;
+  }
+  .embed-controls-toggle {
+    /* Top left, over the grid's empty corner box (above the row numbers, left
+       of column A), so the toggle costs no vertical space at all. */
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    z-index: 20;
+    width: 18px;
+    height: 18px;
+    line-height: 16px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: rgba(86, 94, 109, .12);
+    color: rgba(86, 94, 109, 1);
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .embed-controls-toggle:hover {
+    background: rgba(86, 94, 109, .25);
+  }
   
   .board {
     display: flex;
@@ -627,10 +681,18 @@ const test = () => {
     background: transparent;
     border-radius: 0;
     min-height: 0;
-    overflow-x: auto;
+    /* Univer scrolls inside its own canvas. .board scrolling as well only ever
+       produced its 10px dark-blue styled scrollbar (see ::-webkit-scrollbar
+       below) over a couple of pixels of overflow. */
+    overflow: hidden;
     width: 100%;
     position: relative;
-    max-height: calc(100vh - 50px);
+    /* Fill the box we are given rather than the viewport. `100vh` is the whole
+       frame, which is right for a full applet window and wrong for an embedded
+       block or a group-home asset panel -- and `max-height` alone can never
+       expand, so the sheet stayed crunched at the top with dead space below. */
+    flex: 1 1 auto;
+    max-height: 100%;
   }
   .top-bar {
     border-bottom: 1px solid rgba(35, 32, 74, 0.1);
