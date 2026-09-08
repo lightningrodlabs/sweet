@@ -92,7 +92,7 @@
                 {#if $boardData.status == "complete"}
                 {#if resetVar}
                     {#if $boardData.value.latestState.type === "spreadsheet"}
-                      <CalcySpreadsheetPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/>
+                      <CalcySpreadsheetPane on:reset={() => resetPane()} activeBoard={$activeBoard}/>
                       <!-- <SpreadsheetPane activeBoard={$activeBoard} participants={$participants.value} profiles={profiles.value} myProfile={$profile.value} tabView={true}/> -->
                     {:else if $boardData.value.latestState.type === "document"}
                       <!-- <CalcyPane on:reset={() => resetPane()} activeBoard={$activeBoard} myProfile={$profile.value} participants={$participants.value} profiles={profiles.value}/> -->
