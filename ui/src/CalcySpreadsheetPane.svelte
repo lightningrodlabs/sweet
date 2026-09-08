@@ -62,12 +62,31 @@ let commandService;
 let previousSpreadsheet = null;
 const appliedCommandIds = new Set<string>();
 
+// Dev-only boundary tracer, stripped from release builds. Records what crosses
+// each of the four boundaries so a single reproduction shows WHERE a change is
+// lost: Univer's command pipeline -> capture -> syn -> replay, plus whether the
+// updateSheet() reconciler ever runs.
+//   __traceDump()   print the trace   |   __traceClear()   start a fresh one
+const TRACE = import.meta.env.DEV;
+const trace = (kind: string, detail: any) => {
+  if (!TRACE) return;
+  const w = window as any;
+  if (!w.__trace) {
+    w.__trace = [];
+    w.__traceClear = () => { w.__trace.length = 0; console.log('trace cleared') };
+    w.__traceDump = () => { console.table(w.__trace.map((e: any) => ({ t: e.t, kind: e.kind, detail: e.detail }))); return w.__trace };
+  }
+  w.__trace.push({ t: Math.round(performance.now()), kind, detail });
+  console.log(`[trace] ${kind}`, detail);
+};
+
 const replayPendingCommands = () => {
   if (!commandService || !$synState?.commands?.length) return;
 
   const pendingCommands = $synState.commands.filter((command) => !appliedCommandIds.has(command.syncId));
 
   if (!pendingCommands.length) return;
+  if (TRACE) trace('replay', { count: pendingCommands.length, ids: pendingCommands.map((c: any) => c.id) });
 
   applyingRemoteChange = true;
   try {
@@ -85,7 +104,12 @@ const replayPendingCommands = () => {
 const updateSheet = async () => {
   const incoming = $synState.spreadsheet;
   const local = sheet.save();
-  if (deepEqual(incoming, local)) return;
+  if (deepEqual(incoming, local)) { if (TRACE) trace('updateSheet', 'entered, no-op (equal)'); return; }
+  if (TRACE) trace('updateSheet', {
+    note: 'RECONCILING local workbook to the stored snapshot',
+    incomingSheets: Object.keys(incoming?.sheets ?? {}).length,
+    localSheets: Object.keys(local?.sheets ?? {}).length,
+  });
 
   applyingRemoteChange = true;
   try {
@@ -314,18 +338,79 @@ $: participants = activeBoard.participants()
 $: sessionStore = activeBoard.session
 $: activeHashB64 = store.boardList.activeBoardHashB64;
 $: synState = activeBoard.readableState()
-$: if ($synState && univerAPI && sheet) {
-  if ($synState.spreadsheet !== previousSpreadsheet) {
-    previousSpreadsheet = $synState.spreadsheet;
-    updateSheet()
-  }
 
+// Dev-only, stripped from release builds. syn writes a commit every
+// CommitEveryNDeltas (30) changes or CommitEveryNMs (10s), whichever comes
+// first, and caps a delta chain at SnapshotEveryNCommits (20) before writing a
+// fresh snapshot. The R11 walk needs to know where a board sits in that cycle
+// and there is no UI for it, so expose a counter:
+//   await boardCommits()   -> number of commits on this board
+$: if (TRACE && activeBoard) armDevHelpers(activeBoard);
+
+let devArmedFor: any = null;
+let devCommitsUnsub: (() => void) | null = null;
+let devLastCommitCount = -1;
+function armDevHelpers(board: any) {
+  if (!TRACE || devArmedFor === board) return;
+  devArmedFor = board;
+  const w = window as any;
+  w.board = board;
+  w.boardCommits = () =>
+    new Promise((resolve) => {
+      const unsub = board.document.allCommits.subscribe((s: any) => {
+        if (s.status === 'complete') { resolve(s.value.size); setTimeout(() => unsub(), 0) }
+        else if (s.status === 'error') { resolve(s); setTimeout(() => unsub(), 0) }
+      });
+    });
+  // Log the count as it changes, so the R11 walk does not need the console to be
+  // pointed at this iframe at all -- Moss renders each applet in its own frame,
+  // and `boardCommits` lives on THAT frame's window, not the top one.
+  devCommitsUnsub?.();
+  devLastCommitCount = -1;
+  devCommitsUnsub = board.document.allCommits.subscribe((s: any) => {
+    if (s.status !== 'complete') return;
+    const n = s.value.size;
+    if (n === devLastCommitCount) return;
+    devLastCommitCount = n;
+    console.log(`[sweet dev] syn commits: ${n}`);
+  });
+  console.log(
+    `[sweet dev] helpers armed on ${window.location.origin} -- boardCommits(), board, __traceDump(), __traceClear().\n` +
+    `[sweet dev] if calling them says "not defined", switch the devtools console's frame selector to this origin.`
+  );
+}
+$: if ($synState && univerAPI && sheet) {
+  // The reconciler is deliberately NOT wired to this reaction.
+  //
+  // updateSheet() reconciles the live workbook to `state.spreadsheet`, but that
+  // snapshot is written exactly once -- by Board.Create's set-state -- and never
+  // again: `set-spreadsheet` and `execute-command-batch` are declared in
+  // board.ts and handled in the reducer, but dispatched nowhere. So the snapshot
+  // is frozen at the board's creation state, the command log below is the real
+  // source of truth (a reload rebuilds every sheet from it), and every run of
+  // updateSheet() could only revert the board towards creation state -- step 13
+  // deleting every sheet the snapshot doesn't have, step 9 clearing conditional
+  // formatting it doesn't know about.
+  //
+  // Guarding the trigger was not enough. It was first an identity comparison,
+  // then a content one, and the reconciler still fired: `previousSpreadsheet`
+  // holds a reference into a syn Automerge document, and syn frees superseded
+  // documents (`freeDoc`/`freeDocLater` in @holochain-syn/store), so the
+  // baseline being compared against is not stable in the first place. Rather
+  // than keep guessing at a comparison that survives that, don't call it: while
+  // nothing writes the snapshot the reconciler has no work to do, by
+  // construction.
+  //
+  // updateSheet() is kept, and is correct, for when a real snapshot write is
+  // wired up -- `execute-command-batch` is exactly that path. Re-enable it here
+  // in the same change.
   replayPendingCommands()
 }
 
 const saveSheetCommand = async (command) => {
   const syncId = uuidv1();
   appliedCommandIds.add(syncId);
+  if (TRACE) trace('send-to-syn', { id: command.id, syncId });
 
   activeBoard.requestChanges([
     {
@@ -410,7 +495,9 @@ onMount(async () => {
   replayPendingCommands()
 
   sheet.onCommandExecuted((command) => {
-    if (!applyingRemoteChange && command.id.startsWith('sheet.mutation.')) {
+    const captured = !applyingRemoteChange && command.id.startsWith('sheet.mutation.');
+    if (TRACE) trace('univer-command', { id: command.id, captured, applyingRemoteChange });
+    if (captured) {
       console.log("Command executed", command)
       saveSheetCommand(command);
     }
