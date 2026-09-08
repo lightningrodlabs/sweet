@@ -72,7 +72,16 @@ export const appletServices: AppletServices = {
         const workspaces = await toPromise(docStore.allWorkspaces)
         const workspace = new WorkspaceStore(docStore, Array.from(workspaces.keys())[0])
         const latestState = await toPromise(workspace.latestState)
-        const docType = JSON.parse(wal.context).docType
+        // A WAL's context is a hint, not a guarantee. search() emitted
+        // `context: undefined`, and JSON.parse(undefined) threw right here, so
+        // every search result failed to render and search looked dead. The
+        // document knows its own type; use the context only to override it.
+        let docType = latestState.type
+        try {
+          if (wal.context) docType = JSON.parse(wal.context).docType ?? docType
+        } catch (e) {
+          console.warn("sweet: ignoring unparseable WAL context", wal.context, e)
+        }
 
         return {
           icon_src: docType == "document" ? textDocumentIcon : spreadsheetIcon,
@@ -120,7 +129,7 @@ export const appletServices: AppletServices = {
                 const state = r[1]
                 return state.name.toLowerCase().includes(searchText)
             })
-            .map((r) => ({ hrl: [dnaHash, r![0]], context: undefined }));
+            .map((r) => ({ hrl: [dnaHash, r![0]], context: JSON.stringify({docType: r![1].type}) }));
         
         return hrls
     },
