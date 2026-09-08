@@ -41,7 +41,14 @@
   let renderType = RenderType.App
   let wal: WAL
 
-  initialize()
+  let initError: string | undefined
+
+  initialize().catch((e) => {
+    // Without this the applet sits on its spinner for ever and the reason is
+    // only in the console -- which, in an embed, is a different frame.
+    initError = e?.message ?? String(e)
+    console.error("sweet: applet initialize failed", e)
+  })
 
   async function initialize() : Promise<void> {
     let profilesClient
@@ -54,6 +61,22 @@
     }
     let tokenResp;
     if (!isWeaveContext()) {
+        // isWeaveContext() is `location.protocol === 'applet:' || !!window.__WEAVE_API__`.
+        // A localhost dev applet is served over http:, so it depends entirely on
+        // Moss injecting __WEAVE_API__ into this frame. When an embed does not
+        // get that injection we land here and dial ws://localhost:<appPort> --
+        // which in dev is the vite server, not a conductor, so the connection
+        // never comes up and the view spins for ever.
+        //
+        // VITE_ADMIN_PORT is what a genuine standalone `npm run dev` sets. Its
+        // absence means this is not standalone dev; it is an applet frame that
+        // was not marked as one.
+        if (!adminPort) {
+          throw new Error(
+            "This view was not given a Weave context (window.__WEAVE_API__ is absent and the page is not on the applet: protocol), " +
+            "and there is no VITE_ADMIN_PORT to fall back to standalone dev. Nothing to connect to."
+          )
+        }
         console.log("adminPort is", adminPort)
         if (adminPort) {
           const url = `ws://localhost:${adminPort}`
@@ -82,7 +105,7 @@
     else {
       weClient = await WeaveClient.connect(appletServices);
 
-      console.log("render type", weClient.renderInfo.view.name)
+      console.log("render type", weClient.renderInfo.type, weClient.renderInfo.view?.type)
 
       switch (weClient.renderInfo.type) {
         case "applet-view":
@@ -109,15 +132,17 @@
               }
               break;
             case "asset":
+              // Every asset arm needs this. The "spreadsheet" arm below used to
+              // set renderType without it, so <ControllerBoard board={wal.hrl[1]}>
+              // threw on an undefined wal and the view sat on its spinner
+              // forever. Hoisted so no arm can forget it again.
+              wal = weClient.renderInfo.view.wal
               switch (weClient.renderInfo.view.recordInfo.roleName) {
                 case "calcy":
                   switch (weClient.renderInfo.view.recordInfo.integrityZomeName) {
                     case "syn_integrity":
                       switch (weClient.renderInfo.view.recordInfo.entryType) {
                         case "document":
-                          renderType = RenderType.WAL
-                          wal = weClient.renderInfo.view.wal
-                          break;
                         case "spreadsheet":
                           renderType = RenderType.WAL
                           break;
@@ -172,7 +197,12 @@
 
 <svelte:head>
 </svelte:head>
-{#if connected}
+{#if initError}
+  <div class="init-error">
+    <strong>Sweet could not start this view.</strong>
+    <div>{initError}</div>
+  </div>
+{:else if connected}
 
 <profiles-context store={profilesStore}>
   {#if $prof.status=="pending"}
@@ -208,6 +238,14 @@
 
 
 <style>
+.init-error {
+  margin: 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(180, 40, 40, .08);
+  color: rgba(120, 20, 20, 1);
+  font-size: 13px;
+}
 .welcome-text {
   margin: 40px;
   border-radius: 20px;

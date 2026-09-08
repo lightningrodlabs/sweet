@@ -16,7 +16,9 @@ together — a 0.7 agent cannot see 0.6 peers at all.
 
 To carry content over, use the export/import the UI already offers:
 
-- a single board: its **⋯ menu → Export** (writes a `calcy_export_<name>.json`),
+- a single board: its **⋯ menu → Export** (writes a `spreadsheets_export_<name>.json`;
+  0.2.x wrote `calcy_export_<name>.json` and those import unchanged — import reads the
+  file's contents, not its name),
 - everything: the **About dialog → Export All Documents**, and
   **About dialog → Import Boards** on the 0.7 side.
 - CSV also still works: **board menu → Import**.
@@ -131,8 +133,18 @@ in-place upgrade on the same network. To get the hashes for an artifact locally:
 ## A note on npm
 
 This repo used to be a yarn workspace. It is now npm (`package-lock.json`), which
-is what CI and both release paths use. `@univerjs/icons` is pinned to `1.1.1` in
-both `ui/package.json` and the root `overrides` — `@univerjs/design@0.21.1`
-imports `DropdownIcon`, which later 1.x releases of `@univerjs/icons` no longer
-export, so an unpinned `npm i` produces a UI that does not build. yarn.lock used
-to hold that pin implicitly.
+is what CI and both release paths use.
+
+`@univerjs/icons` used to be pinned to `1.1.1` in both `ui/package.json` and the
+root `overrides`: `@univerjs/design@0.21.1` imports `DropdownIcon`, which later
+1.x releases of `@univerjs/icons` no longer export, so an unpinned `npm i`
+produced a UI that did not build — yarn.lock had held that pin implicitly. **The
+pin is gone as of the Univer 0.25.1 upgrade**, which is most of why that upgrade
+was worth doing: `@univerjs/design@0.25.1` declares `@univerjs/icons` at an exact
+`1.4.0` itself, and the tree resolves to one copy of each.
+
+One trap when cutting a release: `npm test` runs `hc app pack workdir`, a plain
+dev build, and **overwrites `workdir/calcy.happ`**. Run `npm run
+build:happ:release` again before `npm run release:happ` if you have run the tests
+— the script's sha check will refuse to publish otherwise, which is the safety
+net rather than the workflow.

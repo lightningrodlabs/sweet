@@ -201,7 +201,9 @@ export class BoardList {
         if (current && hash && hashEqual(hash, current.hash) && hashEqual(workspaceHash, currentWorkspaceHash)) return
 
         if (hash) {
-            let board: Board | undefined = undefined
+            // NB: no `let` here. A second declaration shadowed the outer `board`,
+            // so the store was updated correctly but the function always returned
+            // undefined to its caller.
             if (workspaceHash) {
                 const documentStore = this.synStore.documents.get(hash)
                 const workspaceStore = new WorkspaceStore(documentStore, workspaceHash)
