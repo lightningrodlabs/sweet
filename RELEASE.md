@@ -73,14 +73,30 @@ the new sha into `.happ-sha256`.
    npm run release:webhapp        # tags v<version> and pushes
    ```
 
-   > ⚠️ **Tag-namespace warning.** This repo carries tags from two earlier,
-   > unrelated versioning schemes: `v0.2.0`–`v0.2.6`, `v0.3.1`, `v0.10.1`–`v0.10.6`
-   > (the old `sweet` app line) and `spreadsheets-0.1.0`/`-0.2.0`/`-0.2.1` (the
-   > Moss tool line). `v0.3.0` is free, so the first 0.7 release is fine — but
-   > `git tag v0.3.1` **will collide** with the 2024 tag of the same name. When
-   > you get there, either delete that stale tag or switch this script and
-   > `release-webhapp.yaml`'s trigger to a `spreadsheets-*` prefix. The curation
-   > list carries an explicit download URL, so either scheme works there.
+   > ⚠️ **Tag-namespace warning — SKIP 0.3.1.** This repo carries tags from two
+   > earlier, unrelated versioning schemes: `v0.2.0`–`v0.2.6`, `v0.3.1`,
+   > `v0.10.1`–`v0.10.6` (the old `sweet` app line) and
+   > `spreadsheets-0.1.0`/`-0.2.0`/`-0.2.1` (the Moss tool line). `v0.3.0` is
+   > free, so the first 0.7 release is fine. **The next patch is not: `v0.3.1`
+   > already exists**, pointing at `3e80b3f` (2024-04-04), and it carries a
+   > published GitHub prerelease with assets that older curation lists may still
+   > link to.
+   >
+   > **The decision is to skip it: go 0.3.0 → 0.3.2.** Do **not** delete the 2024
+   > tag — deleting it destroys published artifacts. Do not reuse it either. The
+   > cost of skipping is one cosmetic gap in the curation list's `versions[]`.
+   >
+   > `release:webhapp` now guards this. If the tag exists it prints the collision,
+   > names this file, tells you to bump to the next free patch, and exits 1
+   > **before** `git tag` or `git push` runs — so nothing is tagged and nothing is
+   > pushed. The check is against local tags, so run `git fetch --tags` first if
+   > this checkout might be missing remote ones.
+   >
+   > Switching the prefix to `spreadsheets-*` (this script plus
+   > `release-webhapp.yaml`'s trigger) would escape the legacy namespace for good
+   > and matches this repo's own tool-line tags, but it diverges from the phase
+   > standard — that is a cross-phase decision, not one to make mid-release. The
+   > curation list carries an explicit download URL, so either scheme works there.
 
 3. The [`release-webhapp`](.github/workflows/release-webhapp.yaml) workflow then:
    - downloads the frozen happ from `happ-v<dnaVersion>` and checks its sha256
