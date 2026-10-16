@@ -23,6 +23,13 @@ To carry content over, use the export/import the UI already offers:
   **About dialog → Import Boards** on the 0.7 side.
 - CSV also still works: **board menu → Import**.
 
+DNA version 0.4.0 (Holochain 0.7.1, syn 0.701.1, profiles 0.702.0) is again a
+new network. Holochain 0.7.1 changed the capability-grant format, and 0.7.0 and
+0.7.1 conductors cannot gossip. This line cannot see spreadsheets from the 0.3.x
+line (`happ-v0.3.0`), so a group has to upgrade together. It needs Moss
+0.16.0-rc.1 or later. Move spreadsheets from 0.3.x with the same Export / Import
+Boards steps.
+
 ## Why the happ is frozen (never rebuilt)
 
 The zome wasm embeds the builder's absolute paths (`~/.cargo/...` and source
@@ -125,8 +132,8 @@ The workflow run summary (and the release body) contains:
 ```
 
 Add a new `versions[]` entry for tool id `spreadsheets` in the 0.16 curation list
-(`versionBranch: "0.3.x"`) with the new `version`, the release's `calcy.webhapp`
-`url`, and these hashes. Because `happSha256` is unchanged, Moss treats it as an
+(`versionBranch: "0.4.x"`; 0.3.x was the Holochain 0.7.0 network) with the
+new `version`, the release's `calcy.webhapp` `url`, and these hashes. Because `happSha256` is unchanged, Moss treats it as an
 in-place upgrade on the same network. To get the hashes for an artifact locally:
 `npm run weave-hash`.
 
